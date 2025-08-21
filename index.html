@@ -1,0 +1,700 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://cdn.jsdelivr.net https://cdnjs.cloudflare.com https://npmcdn.com; style-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://fonts.googleapis.com https://cdn.jsdelivr.net; font-src 'self' https://fonts.gstatic.com https://cdnjs.cloudflare.com; img-src 'self' data:; object-src 'none';">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מערכת ניהול שכירות מתקדמת</title>
+    
+    <!-- External Libraries (CDN) -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://unpkg.com/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/uuid@8.3.2/dist/umd/uuidv4.min.js"></script>
+    <script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/fuse.js@6.6.2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://npmcdn.com/flatpickr/dist/l10n/he.js"></script>
+
+
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+
+    
+    <style>
+        :root {
+            --font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            --border-radius: 10px;
+            --transition-speed: 0.3s;
+            --accent-color: #0d6efd;
+        }
+
+        body.light-theme {
+            --bg-color: #f4f7fc; --surface-color: #ffffff; --text-color: #2a3342; --muted-color: #6c757d;
+            --border-color: #eff2f7; --header-color: #0052cc;
+            --accent-color-hover: color-mix(in srgb, var(--accent-color) 85%, black);
+            --green-color: #1aae6f; --red-color: #e53935; --yellow-color: #ffc107;
+            --shadow-color: rgba(0, 0, 0, 0.05);
+        }
+
+        body.dark-theme {
+            --bg-color: #121826; --surface-color: #1e293b; --text-color: #e2e8f0; --muted-color: #94a3b8;
+            --border-color: #334155; --header-color: #79b1ff;
+            --accent-color-hover: color-mix(in srgb, var(--accent-color) 85%, white);
+            --green-color: #22c55e; --red-color: #ef4444; --yellow-color: #f5b70b;
+            --shadow-color: rgba(0, 0, 0, 0.2);
+        }
+
+        /* Base & Animations */
+        * { box-sizing: border-box; }
+        body { font-family: var(--font-family); background-color: var(--bg-color); color: var(--text-color); margin: 0; transition: background-color var(--transition-speed), color var(--transition-speed); font-size: 15px; }
+        h1, h2, h3 { font-family: 'Inter', sans-serif; font-weight: 600; letter-spacing: -0.5px; }
+        h2 { font-size: 1.75rem; }
+        h3 { font-size: 1.25rem; }
+        #app-container { display: flex; height: 100vh; }
+        .page-content-wrapper { animation: fadeIn 0.5s ease; width: 100%; display: flex; flex-direction: column; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+        @keyframes toastIn { from { transform: translateX(-100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes toastOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(-150%); opacity: 0; } }
+
+        /* Sidebar */
+        .sidebar { width: 240px; flex-shrink: 0; background-color: var(--surface-color); border-left: 1px solid var(--border-color); padding: 20px; display: flex; flex-direction: column; transition: width var(--transition-speed) ease, padding var(--transition-speed) ease; }
+        .sidebar-header { text-align: center; margin-bottom: 2rem; }
+        .sidebar .sidebar-nav-item-text, .sidebar .button-text, .sidebar-header h1, .sidebar .handwritten-title { transition: opacity 0.2s ease, width 0.2s ease; white-space: nowrap; overflow: hidden; }
+        .sidebar-nav { list-style: none; padding: 0; margin: 0; }
+        .sidebar-nav-item { position: relative; }
+        .sidebar-nav-item a { display: flex; align-items: center; padding: 12px 15px; margin: 5px 0; border-radius: var(--border-radius); text-decoration: none; color: var(--text-color); font-weight: 500; transition: all var(--transition-speed); white-space: nowrap; }
+        .sidebar-nav-item a .icon { margin-left: 10px; font-size: 1.2em; transition: margin var(--transition-speed) ease; }
+        .sidebar-nav-item a:hover { background-color: var(--bg-color); transform: translateX(-3px); }
+        .sidebar-nav-item a.active { background-color: var(--accent-color); color: white; }
+        .sidebar.collapsed { width: 70px; padding: 20px 10px; }
+        .sidebar.collapsed .sidebar-nav-item-text, .sidebar.collapsed .button-text, .sidebar.collapsed .sidebar-header h1, .sidebar.collapsed .handwritten-title { opacity: 0; width: 0; }
+        .sidebar.collapsed .sidebar-nav-item a { justify-content: center; }
+        .sidebar.collapsed .sidebar-nav-item a .icon { margin-left: 0; }
+        .sidebar.collapsed .sidebar-footer button { padding: 8px 12px; }
+        .sidebar.collapsed .sidebar-nav-item:hover::after { content: attr(data-tooltip); position: absolute; right: 100%; top: 50%; transform: translateY(-50%); background-color: var(--surface-color); color: var(--text-color); padding: 5px 10px; border-radius: 6px; box-shadow: 0 2px 8px var(--shadow-color); font-size: 0.9rem; z-index: 100; margin-right: 10px; white-space: nowrap; }
+
+        /* Main Content */
+        .main-content { flex-grow: 1; padding: 25px; overflow-y: auto; position: relative; display: flex; flex-direction: column; }
+        .main-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-shrink: 0; }
+        .header-left { display: flex; align-items: center; gap: 15px; }
+        .sidebar-toggle { background: none; border: none; font-size: 1.5rem; cursor: pointer; color: var(--muted-color); }
+        .main-header .actions { display: flex; gap: 10px; }
+        
+        /* Card & Kpi */
+        .card { background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 25px; box-shadow: 0 6px 15px var(--shadow-color); transition: all var(--transition-speed) ease-out; display: flex; flex-direction: column; }
+        .card:hover { transform: translateY(-4px); box-shadow: 0 10px 25px var(--shadow-color); }
+        .kpi-card { justify-content: center; text-align: center; }
+        .kpi-card .kpi-header { display: flex; justify-content: space-between; align-items: flex-start; }
+        .kpi-card .kpi-header .label { font-size: 1rem; color: var(--muted-color); width: 100%; }
+        .kpi-card .kpi-value { font-size: 2.5rem; font-weight: bold; color: var(--text-color); margin-top: 8px; }
+        .kpi-card .kpi-trend { display: flex; justify-content: center; align-items: center; gap: 5px; font-size: 0.9rem; margin-top: 8px; }
+        .kpi-card .sparkline-container { height: 40px; margin-top: auto; }
+        
+        /* Dashboard Layout */
+        .dashboard-grid { display: grid; gap: 25px; grid-template-columns: repeat(4, 1fr); grid-template-rows: 2fr 1fr 2fr; }
+        .dashboard-grid .chart-income-expense { grid-column: 1 / 4; grid-row: 1 / 2; }
+        .dashboard-grid .chart-property-types { grid-column: 4 / 5; grid-row: 1 / 2; }
+        .dashboard-grid .kpi-properties { grid-column: 1 / 2; grid-row: 2 / 3; }
+        .dashboard-grid .kpi-tenants { grid-column: 2 / 3; grid-row: 2 / 3; }
+        .dashboard-grid .kpi-income { grid-column: 3 / 4; grid-row: 2 / 3; }
+        .dashboard-grid .kpi-occupancy { grid-column: 4 / 5; grid-row: 2 / 3; }
+        .dashboard-grid .widget-overdue { grid-column: 1 / 3; grid-row: 3 / 4; }
+        .dashboard-grid .widget-expiring { grid-column: 3 / 5; grid-row: 3 / 4; }
+        @media (max-width: 1200px) {
+            .dashboard-grid { grid-template-columns: repeat(2, 1fr); grid-template-rows: auto; }
+            .dashboard-grid .chart-income-expense { grid-column: 1 / 3; }
+            .dashboard-grid .chart-property-types { grid-column: 1 / 3; }
+            .dashboard-grid .kpi-properties, .dashboard-grid .kpi-tenants, .dashboard-grid .kpi-income, .dashboard-grid .kpi-occupancy { grid-column: auto; }
+            .dashboard-grid .widget-overdue { grid-column: 1 / 2; }
+            .dashboard-grid .widget-expiring { grid-column: 2 / 3; }
+        }
+        @media (max-width: 768px) {
+            .dashboard-grid { grid-template-columns: 1fr; }
+            .dashboard-grid > div { grid-column: 1 / 2 !important; }
+        }
+
+        .chart-container { position: relative; flex-grow: 1; min-height: 250px; }
+        
+        /* Modal */
+        .modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 1000; animation: fadeIn 0.3s ease; }
+        .modal-content { background-color: var(--surface-color); border: 1px solid var(--border-color); border-radius: var(--border-radius); padding: 25px; width: 90%; max-width: 600px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); max-height: 90vh; display: flex; flex-direction: column; animation: slideUp 0.3s ease-out; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 20px;}
+        .modal-header h3 { margin: 0; font-size: 1.5rem; }
+        .modal-body { overflow-y: auto; }
+        .modal-footer { border-top: 1px solid var(--border-color); padding-top: 15px; margin-top: 20px; display: flex; justify-content: flex-start; gap: 10px; }
+
+        /* Toasts */
+        .toast-container { position: fixed; top: 20px; left: 20px; z-index: 2000; display: flex; flex-direction: column; gap: 10px; }
+        .toast { padding: 15px 20px; border-radius: var(--border-radius); color: white; font-weight: 500; box-shadow: 0 4px 12px var(--shadow-color); display: flex; align-items: center; justify-content: space-between; animation: toastIn 0.5s cubic-bezier(0.25, 1, 0.5, 1); }
+        .toast.closing { animation: toastOut 0.5s cubic-bezier(0.5, 0, 0.75, 0) forwards; }
+        .toast.success { background-color: var(--green-color); }
+        .toast.error { background-color: var(--red-color); }
+        .toast.info { background-color: var(--accent-color); }
+        .toast button { margin-right: 15px; border-color: white; color: white; background-color: transparent; font-weight: bold; }
+
+        /* Command Palette */
+        .command-palette { padding: 0; max-width: 650px; }
+        .command-palette-input-wrapper { display: flex; align-items: center; border-bottom: 1px solid var(--border-color); }
+        .command-palette-input { width: 100%; padding: 15px; font-size: 1.2rem; border: none; background: transparent; color: var(--text-color); }
+        .command-palette-input:focus { outline: none; }
+        .command-palette-count { padding: 0 15px; color: var(--muted-color); font-size: 0.9rem; }
+        .command-palette-results { max-height: 400px; overflow-y: auto; }
+        .command-palette-item { display: flex; align-items: center; gap: 15px; padding: 12px 15px; cursor: pointer; border-radius: 6px; margin: 4px; }
+        .command-palette-item:hover, .command-palette-item.selected { background-color: var(--accent-color); color: white; }
+        .command-palette-item .icon { font-size: 1.2rem; width: 20px; text-align: center; }
+        .command-palette-item small { color: var(--muted-color); }
+        .command-palette-item.selected small { color: rgba(255,255,255,0.7); }
+
+        /* Floating Action Button (FAB) */
+        .fab-container { position: fixed; bottom: 30px; left: 30px; z-index: 1000; }
+        .fab { width: 56px; height: 56px; border-radius: 50%; background-color: var(--accent-color); color: white; font-size: 24px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.3); cursor: pointer; display: flex; justify-content: center; align-items: center; transition: transform 0.3s ease, background-color var(--transition-speed); }
+        .fab:hover { transform: scale(1.1); background-color: var(--accent-color-hover); }
+        .fab.open { transform: rotate(45deg); }
+        .fab-menu { position: absolute; bottom: 70px; left: 0; display: flex; flex-direction: column; gap: 15px; }
+        .fab-menu-item { display: flex; align-items: center; gap: 10px; cursor: pointer; opacity: 0; transform: translateY(20px); transition: opacity 0.3s, transform 0.3s; transition-delay: var(--delay); }
+        .fab-menu-item.visible { opacity: 1; transform: translateY(0); }
+        .fab-menu-item .label { background: var(--surface-color); padding: 5px 10px; border-radius: 6px; box-shadow: 0 2px 5px rgba(0,0,0,0.2); font-weight: 500; }
+        .fab-menu-item .fab-icon { width: 48px; height: 48px; border-radius: 50%; background-color: var(--surface-color); color: var(--accent-color); font-size: 20px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.2); display: flex; justify-content: center; align-items: center; transition: transform 0.2s ease; }
+        .fab-menu-item:hover .fab-icon { transform: scale(1.1); }
+        
+        /* Lottie Empty State */
+        .empty-state-lottie { text-align: center; padding: 20px; color: var(--muted-color); }
+        .empty-state-lottie lottie-player { margin: 0 auto; }
+        
+        /* Calendar Layout */
+        .calendar-card { display: flex; flex-direction: column; flex-grow: 1; }
+        .calendar-header { flex-shrink: 0; display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); grid-template-rows: auto repeat(5, 1fr); gap: 5px; flex-grow: 1; }
+        .calendar-day-header { text-align: center; font-weight: bold; color: var(--muted-color); padding-bottom: 10px; }
+        .calendar-day { border: 1px solid var(--border-color); border-radius: 6px; padding: 8px; font-weight: bold; cursor: pointer; transition: background-color 0.2s; overflow-y: auto; display: flex; flex-direction: column; gap: 4px; }
+        .calendar-day:hover { background-color: var(--bg-color); }
+        .calendar-day.other-month { background-color: var(--bg-color); color: var(--muted-color); }
+        .calendar-day.today { border-color: var(--accent-color); background-color: color-mix(in srgb, var(--accent-color) 10%, transparent); }
+        .calendar-day-event { font-size: 0.8rem; padding: 2px 5px; border-radius: 4px; color: white; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .event-type-maintenance { background-color: var(--red-color); }
+        .event-type-contract { background-color: var(--yellow-color); color: var(--text-color); }
+        .event-type-payment { background-color: var(--green-color); }
+        .event-type-default { background-color: var(--accent-color); }
+
+        /* Settings Layout */
+        .settings-grid { display: grid; gap: 25px; grid-template-columns: repeat(auto-fit, minmax(450px, 1fr)); }
+
+        /* Other styles */
+        .handwritten-title { font-family: 'Dancing Script', cursive; font-size: 1.1rem; color: var(--muted-color); text-align: center; margin-top: 5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .sidebar:not(.collapsed) .handwritten-title { width: 100%; }
+        .loading-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background-color: rgba(0,0,0,0.5); display: flex; justify-content: center; align-items: center; z-index: 9999; color: white; font-size: 1.5rem; font-weight: bold; flex-direction: column; gap: 10px; }
+        .data-table { width: 100%; border-collapse: collapse; }
+        .data-table th, .data-table td { padding: 12px 15px; text-align: right; border-bottom: 1px solid var(--border-color); }
+        .data-table thead th { background-color: var(--bg-color); font-weight: 600; cursor: pointer; user-select: none; }
+        .data-table tbody tr { transition: background-color 0.15s ease-in-out; }
+        .data-table tbody tr:hover { background-color: var(--bg-color); }
+        .status-pill { padding: 4px 10px; border-radius: 20px; font-size: 0.8rem; font-weight: bold; color: white; text-align: center; }
+        .status-pill.paid { background-color: var(--green-color); }
+        .status-pill.unpaid { background-color: var(--red-color); }
+        .status-pill.archived { background-color: var(--muted-color); }
+        .status-pill.due-soon { background-color: var(--yellow-color); color: var(--text-color); }
+        .status-pill.ok { background-color: var(--accent-color); }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { display: block; margin-bottom: 5px; font-weight: 600; }
+        .widget-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; }
+        .widget-list li { padding: 8px 0; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; transition: background-color 0.2s; border-radius: 4px; }
+        .widget-list li:hover { background-color: var(--bg-color); cursor: pointer; }
+        .widget-list li:last-child { border-bottom: none; }
+        .widget-list .quick-actions button { background: none; border: none; color: var(--accent-color); padding: 4px; }
+        .empty-state { text-align: center; padding: 40px; color: var(--muted-color); }
+        .empty-state i { font-size: 3rem; margin-bottom: 1rem; }
+        .bulk-action-bar { padding: 10px; background-color: var(--accent-color); color: white; border-radius: var(--border-radius); margin-bottom: 1rem; display: flex; justify-content: space-between; align-items: center; animation: slideUp 0.3s; }
+        button { font-family: var(--font-family); border: 1px solid var(--border-color); background-color: var(--surface-color); color: var(--text-color); padding: 8px 16px; border-radius: 6px; cursor: pointer; font-weight: 600; transition: all var(--transition-speed); display: flex; align-items: center; justify-content: center; gap: 8px; }
+        button:hover:not(:disabled) { border-color: var(--accent-color); background-color: var(--bg-color); transform: translateY(-2px); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; }
+        button.primary { background-color: var(--accent-color); color: white; border-color: var(--accent-color); }
+        button.primary:hover:not(:disabled) { background-color: var(--accent-color-hover); border-color: var(--accent-color-hover); }
+        button.danger { background-color: var(--red-color); color: white; border-color: var(--red-color); }
+        button.danger:hover:not(:disabled) { background-color: color-mix(in srgb, var(--red-color) 85%, black); }
+        button.success { background-color: var(--green-color); color: white; border-color: var(--green-color); }
+        button.success:hover:not(:disabled) { background-color: color-mix(in srgb, var(--green-color) 85%, black); }
+        input, select, textarea { font-family: var(--font-family); width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--border-color); background-color: var(--bg-color); color: var(--text-color); font-size: 1rem; }
+        input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent-color); box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent-color) 20%, transparent); }
+        .table-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; gap: 1rem; flex-wrap: wrap; }
+        .table-filters { display: flex; align-items: center; gap: 1rem; }
+        .search-input { padding: 10px; border: 1px solid var(--border-color); border-radius: 6px; }
+        .detail-page-header { display: flex; align-items: center; gap: 15px; margin-bottom: 1.5rem; }
+        .detail-page-header h2 { margin: 0; }
+        .document-list { list-style: none; padding: 0; }
+        .document-list-item { display: flex; justify-content: space-between; align-items: center; padding: 10px; border-radius: 6px; transition: background-color 0.2s; }
+        .document-list-item:hover { background-color: var(--bg-color); }
+        .document-list-item a { cursor: pointer; color: var(--accent-color); text-decoration: none; font-weight: 500; }
+        .quick-payment-btn-group { display: flex; }
+        .quick-payment-btn-group .main-btn { border-top-left-radius: 0; border-bottom-left-radius: 0; }
+        .quick-payment-btn-group .dropdown-btn { border-top-right-radius: 0; border-bottom-right-radius: 0; padding: 4px 8px; border-left: 1px solid color-mix(in srgb, var(--green-color) 70%, black); }
+        .detail-info-row { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid var(--border-color); }
+        .detail-info-row:last-child { border-bottom: none; }
+        .detail-info-row strong { color: var(--muted-color); }
+        .inline-edit-container { cursor: pointer; }
+        .validation-error { color: var(--red-color); font-size: 0.9rem; margin-top: 4px; }
+        .health-issue { cursor: pointer; }
+        .health-issue:hover { color: var(--accent-color); }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useMemo, useRef, useReducer, createContext, useContext } = React;
+        const { Chart } = window;
+        const { jsPDF } = window.jspdf;
+        const Fuse = window.Fuse;
+        
+        // --- CONSTANTS & HELPERS ---
+        const formatDate = (dateStr) => !dateStr ? '—' : new Date(dateStr).toLocaleDateString('he-IL', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const formatCurrency = (val, symbol) => new Intl.NumberFormat('he-IL', { style: 'currency', currency: 'ILS', minimumFractionDigits: 0 }).format(val || 0).replace('₪', symbol || '₪');
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const todayStr = today.toISOString().split('T')[0];
+        const normalizeDate = (dateStr) => dateStr ? new Date(dateStr).toISOString().split('T')[0] : null;
+
+        const useCountUp = (endValue, duration = 300) => {
+            const [count, setCount] = useState(0);
+            const frameRate = 1000 / 60;
+            const totalFrames = Math.round(duration / frameRate);
+
+            useEffect(() => {
+                let frame = 0;
+                const counter = setInterval(() => {
+                    frame++;
+                    const progress = frame / totalFrames;
+                    const currentCount = Math.round(endValue * progress);
+                    setCount(currentCount);
+
+                    if (frame === totalFrames) {
+                        clearInterval(counter);
+                        setCount(endValue);
+                    }
+                }, frameRate);
+
+                return () => clearInterval(counter);
+            }, [endValue, duration]);
+
+            return count;
+        };
+
+
+        // --- DATA MANAGER ---
+        const dataManager = {
+            loadData: async () => window.electronAPI ? window.electronAPI.loadData() : {},
+            saveData: async (data) => window.electronAPI ? window.electronAPI.saveData(data) : false,
+            loadSettings: async () => window.electronAPI ? window.electronAPI.loadSettings() : {},
+            saveSettings: async (settings) => window.electronAPI ? window.electronAPI.saveSettings(settings) : false,
+        };
+
+        // --- STATE MANAGEMENT ---
+        const AppContext = createContext();
+        const initialState = {
+            properties: [], tenants: [], events: [], expenses: [], payments: [],
+            view: { page: 'dashboard', params: {} },
+            settings: { 
+                notifyLeaseExpiry: true, 
+                notifyLeaseDays: 30, 
+                currencySymbol: '₪', 
+                accentColor: '#0d6efd', 
+                theme: 'system',
+                graphColor: '#22c55e',
+                animationsEnabled: true,
+                customFields: []
+            }
+        };
+
+        const appReducer = (state, action) => {
+            switch(action.type) {
+                case 'REPLACE_ALL_DATA': return { ...state, ...action.payload };
+                case 'REPLACE_DATA_AND_SETTINGS': return { ...state, ...action.payload.data, settings: action.payload.settings };
+                case 'REPLACE_SETTINGS': return { ...state, settings: action.payload };
+                case 'CHANGE_VIEW': return { ...state, view: action.payload };
+                case 'ADD_TENANTS_BULK': return { ...state, tenants: [...state.tenants, ...action.payload] };
+                case 'ADD_PROPERTIES_BULK': return { ...state, properties: [...state.properties, ...action.payload] };
+                case 'ADD_DOCUMENT': {
+                    const { entityType, entityId, document } = action.payload;
+                    return { ...state, [entityType]: state[entityType].map(e => e.id === entityId ? { ...e, documents: [...(e.documents || []), document] } : e) };
+                }
+                case 'ADD_PROPERTY': return { ...state, properties: [...state.properties, { ...action.payload, id: uuidv4(), documents:[], customData: {} }] };
+                case 'UPDATE_PROPERTY': return { ...state, properties: state.properties.map(p => p.id === action.payload.id ? { ...p, ...action.payload.updates } : p) };
+                case 'DELETE_PROPERTY': return { ...state, properties: state.properties.filter(p => p.id !== action.payload) };
+                case 'DELETE_PROPERTIES_BULK': return { ...state, properties: state.properties.filter(p => !action.payload.includes(p.id)) };
+                case 'ADD_TENANT': return { ...state, tenants: [...state.tenants, { ...action.payload, id: uuidv4(), is_active: true, documents:[], customData: {} }] };
+                case 'UPDATE_TENANT': return { ...state, tenants: state.tenants.map(t => t.id === action.payload.id ? { ...t, ...action.payload.updates } : t) };
+                case 'ARCHIVE_TENANTS_BULK': return { ...state, tenants: state.tenants.map(t => action.payload.includes(t.id) ? { ...t, is_active: false } : t) };
+                case 'ADD_PAYMENT': return { ...state, payments: [...state.payments, { ...action.payload, id: uuidv4() }] };
+                case 'ADD_EVENT': return { ...state, events: [...state.events, { ...action.payload, id: uuidv4() }] };
+                case 'UPDATE_EVENT': return { ...state, events: state.events.map(e => e.id === action.payload.id ? { ...e, ...action.payload.updates } : e) };
+                case 'DELETE_EVENT': return { ...state, events: state.events.filter(e => e.id !== action.payload) };
+                case 'ADD_EXPENSE': return { ...state, expenses: [...state.expenses, { ...action.payload, id: uuidv4() }] };
+                case 'UNDO_ARCHIVE_TENANTS': return { ...state, tenants: action.payload };
+                case 'UNDO_DELETE_PROPERTIES': return { ...state, properties: action.payload };
+                default: return state;
+            }
+        };
+
+        const AppProvider = ({ children }) => {
+            const [state, dispatch] = useReducer(appReducer, initialState);
+            const [notifications, setNotifications] = useState([]);
+            const [lastAction, setLastAction] = useState(null);
+
+            const addNotification = (message, type = 'success', duration = 4000, actions = []) => {
+                const id = Date.now();
+                setNotifications(prev => [...prev, { id, message, type, closing: false, actions }]);
+                if (duration > 0) {
+                    setTimeout(() => {
+                        setNotifications(prev => prev.map(n => n.id === id ? { ...n, closing: true } : n));
+                        setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 500);
+                    }, duration);
+                }
+                return id;
+            };
+
+            const removeNotification = (id) => {
+                setNotifications(prev => prev.map(n => n.id === id ? { ...n, closing: true } : n));
+                setTimeout(() => setNotifications(prev => prev.filter(n => n.id !== id)), 500);
+            };
+
+            const setUndoableAction = (undoAction) => {
+                const id = addNotification('הפעולה בוצעה', 'info', 7000, [
+                    {
+                        label: 'בטל',
+                        onClick: () => {
+                            dispatch(undoAction);
+                            addNotification('הפעולה בוטלה');
+                            setLastAction(null);
+                        }
+                    }
+                ]);
+                setLastAction({ ...undoAction, notificationId: id });
+            };
+
+            const dispatchWithUndoClear = (action) => {
+                if (lastAction) {
+                    removeNotification(lastAction.notificationId);
+                    setLastAction(null);
+                }
+                dispatch(action);
+            };
+
+            return (<AppContext.Provider value={{ state, dispatch: dispatchWithUndoClear, addNotification, setUndoableAction }}>{children}<div className="toast-container">{notifications.map(n => <div key={n.id} className={`toast ${n.type} ${n.closing ? 'closing' : ''}`}><span>{n.message}</span><div>{n.actions.map(a => <button key={a.label} onClick={()=>{a.onClick(); removeNotification(n.id)}}>{a.label}</button>)}</div></div>)}</div></AppContext.Provider>);
+        };
+        const useAppContext = () => useContext(AppContext);
+
+        // --- UI & FORM COMPONENTS ---
+        const Modal = ({ isOpen, onClose, title, children, className="" }) => { if (!isOpen) return null; return (<div className="modal-overlay" onClick={onClose}><div className={`modal-content ${className}`} onClick={e => e.stopPropagation()}><div className="modal-header"><h3>{title}</h3><button onClick={onClose}><i className="fas fa-times"></i></button></div><div className="modal-body">{children}</div></div></div>); };
+        const ConfirmModal = ({ isOpen, onClose, onConfirm, title, message }) => (<Modal isOpen={isOpen} onClose={onClose} title={title}><p>{message}</p><div className="modal-footer"><button type="button" onClick={onClose}>ביטול</button><button type="button" className="danger" onClick={() => { onConfirm(); onClose(); }}>אישור</button></div></Modal>);
+        const EmptyState = ({ icon, message, actionText, onAction }) => (<div className="empty-state card"><i className={`fas ${icon}`}></i><p>{message}</p>{onAction && <button className="primary" onClick={onAction}>{actionText}</button>}</div>);
+        const ChartComponent = ({ type, data, options }) => { const chartRef = useRef(null); useEffect(() => { const chartInstance = new Chart(chartRef.current, { type, data, options }); return () => chartInstance.destroy(); }, [type, data, options]); return <div className="chart-container"><canvas ref={chartRef}></canvas></div>; };
+        const Sparkline = ({ data, color }) => { const chartRef = useRef(null); useEffect(() => { const chartInstance = new Chart(chartRef.current, { type: 'line', data: { labels: data.map((_, i) => i), datasets: [{ data, borderColor: color, borderWidth: 2, pointRadius: 0, tension: 0.4 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, tooltip: { enabled: false } }, scales: { x: { display: false }, y: { display: false } } } }); return () => chartInstance.destroy(); }, [data, color]); return <div className="sparkline-container"><canvas ref={chartRef}></canvas></div>; };
+        const useSortableData = (items, config = null) => { const [sortConfig, setSortConfig] = useState(config); const sortedItems = useMemo(() => { let sortableItems = [...items]; if (sortConfig !== null) { sortableItems.sort((a, b) => { if (a[sortConfig.key] < b[sortConfig.key]) { return sortConfig.direction === 'ascending' ? -1 : 1; } if (a[sortConfig.key] > b[sortConfig.key]) { return sortConfig.direction === 'ascending' ? 1 : -1; } return 0; }); } return sortableItems; }, [items, sortConfig]); const requestSort = (key) => { let direction = 'ascending'; if (sortConfig && sortConfig.key === key && sortConfig.direction === 'ascending') { direction = 'descending'; } setSortConfig({ key, direction }); }; return { items: sortedItems, requestSort, sortConfig }; };
+        const SortableDataTable = ({ headers, data, renderRow, selectedItems, onSelectItem, onSelectAll, selectable }) => { const { items, requestSort, sortConfig } = useSortableData(data); const getSortIndicator = (key) => { if (!sortConfig || sortConfig.key !== key) return '↕'; return sortConfig.direction === 'ascending' ? '↑' : '↓'; }; return (<table className="data-table"><thead><tr>{selectable && <th><input type="checkbox" checked={selectedItems?.length === data.length && data.length > 0} onChange={onSelectAll} /></th>}{headers.map(header => (<th key={header.key} onClick={() => header.sortable && requestSort(header.key)}>{header.label} {header.sortable && getSortIndicator(header.key)}</th>))}</tr></thead><tbody>{items.map((item, index) => renderRow(item, index, { selected: selectable && selectedItems?.includes(item.id), onSelect: () => onSelectItem(item.id) }))}</tbody></table>); };
+        const useFormValidator = (initialState, requiredFields, validators = {}) => { const [formData, setFormData] = useState(initialState); const [errors, setErrors] = useState({}); const validate = () => { const newErrors = {}; for(const field of requiredFields) { if(!formData[field]) { newErrors[field] = 'שדה חובה'; } } for(const field in validators) { const error = validators[field](formData[field], formData); if(error) newErrors[field] = error; } setErrors(newErrors); return Object.keys(newErrors).length === 0; }; const handleChange = (e) => { const { name, value, type, checked } = e.target; setFormData({ ...formData, [name]: type === 'checkbox' ? checked : value }); if(errors[name]) { const newErrors = {...errors}; delete newErrors[name]; setErrors(newErrors); } }; return { formData, setFormData, errors, validate, handleChange }; };
+        const DatePicker = ({ value, onChange, name }) => { const ref = useRef(null); useEffect(() => { if (ref.current) { const fp = flatpickr(ref.current, { dateFormat: "Y-m-d", defaultDate: value, locale: "he", onChange: (selectedDates) => { onChange({ target: { name, value: normalizeDate(selectedDates[0]) } }); } }); return () => fp.destroy(); } }, [value]); return <input ref={ref} name={name} placeholder="בחר תאריך..." />; };
+        const InlineEdit = ({ value, onSave, type = 'text', placeholder = 'הזן ערך' }) => { const [isEditing, setIsEditing] = useState(false); const [currentValue, setCurrentValue] = useState(value); const inputRef = useRef(null); useEffect(() => { if (isEditing) { inputRef.current?.focus(); inputRef.current?.select(); } }, [isEditing]); const handleSave = () => { if (currentValue !== value) { onSave(currentValue); } setIsEditing(false); }; const handleKeyDown = (e) => { if (e.key === 'Enter') handleSave(); if (e.key === 'Escape') { setCurrentValue(value); setIsEditing(false); } }; if (isEditing) { return <input ref={inputRef} type={type} value={currentValue} onChange={(e) => setCurrentValue(e.target.value)} onBlur={handleSave} onKeyDown={handleKeyDown} placeholder={placeholder} />; } return <span onClick={() => setIsEditing(true)} className="inline-edit-container">{value || '—'}</span>; };
+        const PropertyForm = ({ property, onSave, onClose }) => { const { state } = useAppContext(); const { settings } = state; const { formData, setFormData, errors, validate, handleChange } = useFormValidator(property || { address: '', property_type: 'דירה', electricity_meter: '', water_meter: '', comments: '', customData: {} }, ['address']); const propertyCustomFields = (settings.customFields || []).filter(f => f.entity === 'Property'); const handleCustomChange = (id, value) => { setFormData(prev => ({ ...prev, customData: { ...prev.customData, [id]: value } })); }; const handleSubmit = (e) => { e.preventDefault(); if (validate()) onSave(formData); }; return (<form onSubmit={handleSubmit} noValidate><div className="form-group"><label>כתובת*</label><input name="address" value={formData.address} onChange={handleChange} required className={errors.address ? 'is-invalid' : ''} placeholder="לדוגמה: הרצל 10, תל אביב" />{errors.address && <div className="validation-error">{errors.address}</div>}</div><div className="form-group"><label>סוג הנכס</label><select name="property_type" value={formData.property_type || 'דירה'} onChange={handleChange}><option>דירה</option><option>משרד</option><option>חנות</option><option>אחר</option></select></div><div className="form-group"><label>מספר מונה חשמל</label><input name="electricity_meter" value={formData.electricity_meter} onChange={handleChange} placeholder="123456789" /></div><div className="form-group"><label>מספר מונה מים</label><input name="water_meter" value={formData.water_meter} onChange={handleChange} placeholder="987654321" /></div><div className="form-group"><label>הערות</label><textarea name="comments" value={formData.comments} onChange={handleChange} rows="3" placeholder="פרטים נוספים על הנכס..."></textarea></div>{propertyCustomFields.map(field => (<div className="form-group" key={field.id}><label>{field.label}</label>{field.type === 'Text' && <input type="text" value={formData.customData?.[field.id] || ''} onChange={e => handleCustomChange(field.id, e.target.value)} />}{field.type === 'Number' && <input type="number" value={formData.customData?.[field.id] || ''} onChange={e => handleCustomChange(field.id, e.target.value)} />}{field.type === 'Date' && <DatePicker value={formData.customData?.[field.id]} onChange={({target}) => handleCustomChange(field.id, target.value)} />}{field.type === 'Yes/No' && <select value={formData.customData?.[field.id] || 'No'} onChange={e => handleCustomChange(field.id, e.target.value)}><option value="No">לא</option><option value="Yes">כן</option></select>}</div>))}<div className="modal-footer"><button type="button" onClick={onClose}>ביטול</button><button type="submit" className="primary">שמור</button></div></form>); };
+        const TenantForm = ({ tenant, properties, onSave, onClose }) => { const { state } = useAppContext(); const { settings } = state; const { formData, setFormData, errors, validate, handleChange } = useFormValidator(tenant || { name: '', id_number: '', property_id: '', monthly_rent: '', contract_start_date: '', contract_end_date: '', rent_due_day: 1, phone: '', address: '', deposit: '', comments: '', customData: {} }, ['name'], { contract_end_date: (val, allVals) => { if (val && allVals.contract_start_date && new Date(val) < new Date(allVals.contract_start_date)) { return 'תאריך הסיום חייב להיות אחרי תאריך ההתחלה'; } return null; }, phone: (val) => { if (val && !/^05\d{8}$/.test(val)) { return 'מספר טלפון לא תקין (נדרשות 10 ספרות, מתחיל ב-05)'; } return null; }, id_number: (val) => { if (val && !/^\d{9}$/.test(val)) { return 'מספר ת.ז. לא תקין (נדרשות 9 ספרות)'; } return null; } }); const tenantCustomFields = (settings.customFields || []).filter(f => f.entity === 'Tenant'); const handleCustomChange = (id, value) => { setFormData(prev => ({ ...prev, customData: { ...prev.customData, [id]: value } })); }; useEffect(() => { if (formData.contract_start_date && !tenant) { const startDate = new Date(formData.contract_start_date); startDate.setFullYear(startDate.getFullYear() + 1); setFormData(prev => ({ ...prev, contract_end_date: normalizeDate(startDate) })); } }, [formData.contract_start_date]); const handleSubmit = (e) => { e.preventDefault(); if (validate()) onSave(formData); }; return (<form onSubmit={handleSubmit} noValidate><div className="form-group"><label>שם מלא*</label><input name="name" value={formData.name} onChange={handleChange} required className={errors.name ? 'is-invalid' : ''} placeholder="ישראל ישראלי"/>{errors.name && <div className="validation-error">{errors.name}</div>}</div><div className="form-group"><label>מספר ת.ז.</label><input name="id_number" value={formData.id_number} onChange={handleChange} placeholder="123456789" />{errors.id_number && <div className="validation-error">{errors.id_number}</div>}</div><div className="form-group"><label>טלפון</label><input name="phone" value={formData.phone} onChange={handleChange} placeholder="050-1234567" />{errors.phone && <div className="validation-error">{errors.phone}</div>}</div><div className="form-group"><label>כתובת</label><input name="address" value={formData.address} onChange={handleChange} placeholder="הנביאים 5, ירושלים" /></div><div className="form-group"><label>נכס משוייך</label><select name="property_id" value={formData.property_id} onChange={handleChange}><option value="">בחר נכס</option>{properties.map(p => <option key={p.id} value={p.id}>{p.address}</option>)}</select></div><div className="form-group"><label>שכר דירה חודשי</label><input type="number" name="monthly_rent" value={formData.monthly_rent} onChange={handleChange} placeholder="5000"/></div><div className="form-group"><label>פיקדון</label><input type="number" name="deposit" value={formData.deposit} onChange={handleChange} placeholder="10000"/></div><div className="form-group"><label>יום תשלום שכ"ד בחודש</label><input type="number" name="rent_due_day" value={formData.rent_due_day || 1} onChange={handleChange} min="1" max="31"/></div><div className="form-group"><label>תחילת חוזה</label><DatePicker name="contract_start_date" value={formData.contract_start_date} onChange={handleChange} /></div><div className="form-group"><label>סיום חוזה</label><DatePicker name="contract_end_date" value={formData.contract_end_date} onChange={handleChange}/>{errors.contract_end_date && <div className="validation-error">{errors.contract_end_date}</div>}</div><div className="form-group"><label>הערות</label><textarea name="comments" value={formData.comments} onChange={handleChange} rows="3" placeholder="פרטים נוספים על השוכר או החוזה..."></textarea></div>{tenantCustomFields.map(field => (<div className="form-group" key={field.id}><label>{field.label}</label>{field.type === 'Text' && <input type="text" value={formData.customData?.[field.id] || ''} onChange={e => handleCustomChange(field.id, e.target.value)} />}{field.type === 'Number' && <input type="number" value={formData.customData?.[field.id] || ''} onChange={e => handleCustomChange(field.id, e.target.value)} />}{field.type === 'Date' && <DatePicker value={formData.customData?.[field.id]} onChange={({target}) => handleCustomChange(field.id, target.value)} />}{field.type === 'Yes/No' && <select value={formData.customData?.[field.id] || 'No'} onChange={e => handleCustomChange(field.id, e.target.value)}><option value="No">לא</option><option value="Yes">כן</option></select>}</div>))}<div className="modal-footer"><button type="button" onClick={onClose}>ביטול</button><button type="submit" className="primary">שמור</button></div></form>); };
+        const EventForm = ({ event, tenants, onSave, onClose }) => { const { formData, errors, validate, handleChange } = useFormValidator(event || { title: '', date: todayStr, type: 'הערה כללית', recurrence: 'none', tenant_id: '' }, ['title']); const handleSubmit = (e) => { e.preventDefault(); if(validate()) onSave(formData); }; return (<form onSubmit={handleSubmit} noValidate><div className="form-group"><label>כותרת*</label><input name="title" value={formData.title} onChange={handleChange} required className={errors.title ? 'is-invalid' : ''} placeholder="לדוגמה: תיקון מזגן"/>{errors.title && <div className="validation-error">{errors.title}</div>}</div><div className="form-group"><label>תאריך</label><DatePicker name="date" value={formData.date} onChange={handleChange} /></div><div className="form-group"><label>סוג</label><select name="type" value={formData.type || 'הערה כללית'} onChange={handleChange}><option>הערה כללית</option><option>תחזוקה</option><option>חוזה</option><option>תשלום</option></select></div><div className="form-group"><label>שיוך לשוכר</label><select name="tenant_id" value={formData.tenant_id} onChange={handleChange}><option value="">כללי</option>{tenants.filter(t=>t.is_active).map(t => <option key={t.id} value={t.id}>{t.name}</option>)}</select></div><div className="modal-footer"><button type="button" onClick={onClose}>ביטול</button><button type="submit" className="primary">שמור</button></div></form>); };
+        const ExpenseForm = ({ expense, properties, onSave, onClose }) => { const { formData, errors, validate, handleChange } = useFormValidator(expense || { description: '', amount: '', category: 'שונות', date: todayStr, property_id: '' }, ['description', 'amount'], {}); const handleSubmit = (e) => { e.preventDefault(); if(validate()) onSave(formData); }; return (<form onSubmit={handleSubmit} noValidate><div className="form-group"><label>תיאור*</label><input name="description" value={formData.description} onChange={handleChange} required className={errors.description ? 'is-invalid' : ''} placeholder="לדוגמה: תשלום ארנונה"/>{errors.description && <div className="validation-error">{errors.description}</div>}</div><div className="form-group"><label>סכום*</label><input type="number" name="amount" value={formData.amount} onChange={handleChange} required className={errors.amount ? 'is-invalid' : ''} placeholder="300" />{errors.amount && <div className="validation-error">{errors.amount}</div>}</div><div className="form-group"><label>קטגוריה</label><input name="category" value={formData.category} onChange={handleChange} placeholder="מיסים"/></div><div className="form-group"><label>תאריך</label><DatePicker name="date" value={formData.date} onChange={handleChange} /></div><div className="form-group"><label>שיוך לנכס</label><select name="property_id" value={formData.property_id} onChange={handleChange}><option value="">כללי</option>{properties.map(p => <option key={p.id} value={p.id}>{p.address}</option>)}</select></div><div className="modal-footer"><button type="button" onClick={onClose}>ביטול</button><button type="submit" className="primary">שמור</button></div></form>); };
+        const PaymentForm = ({ payment, tenants, onSave, onClose }) => { const { formData, setFormData, errors, validate, handleChange } = useFormValidator(payment || { amount: '', date: todayStr, tenant_id: '' }, ['amount', 'tenant_id'], {}); useEffect(() => { if (formData.tenant_id) { const selectedTenant = tenants.find(t => t.id === formData.tenant_id); if (selectedTenant && selectedTenant.monthly_rent) { setFormData(prev => ({ ...prev, amount: selectedTenant.monthly_rent })); } } }, [formData.tenant_id]); const handleSubmit = (e) => { e.preventDefault(); if (validate()) onSave(formData); }; return (<form onSubmit={handleSubmit} noValidate><div className="form-group"><label>שוכר*</label><select name="tenant_id" value={formData.tenant_id} onChange={handleChange} required className={errors.tenant_id ? 'is-invalid' : ''}><option value="">בחר שוכר</option>{tenants.filter(t=>t.is_active).map(t=><option key={t.id} value={t.id}>{t.name}</option>)}</select>{errors.tenant_id && <div className="validation-error">{errors.tenant_id}</div>}</div><div className="form-group"><label>סכום*</label><input type="number" name="amount" value={formData.amount} onChange={handleChange} required className={errors.amount ? 'is-invalid' : ''} placeholder="5000"/>{errors.amount && <div className="validation-error">{errors.amount}</div>}</div><div className="form-group"><label>תאריך תשלום</label><DatePicker name="date" value={formData.date} onChange={handleChange} /></div><div className="modal-footer"><button type="button" onClick={onClose}>ביטול</button><button type="submit" className="primary">שמור תשלום</button></div></form>); };
+        
+        // --- FEATURE COMPONENTS ---
+        const DocumentManager = ({ entity, entityType }) => { const { dispatch, addNotification } = useAppContext(); const [isUploading, setIsUploading] = useState(false); const handleFileUpload = async () => { setIsUploading(true); const result = await window.electronAPI.uploadFile(); if (result.success) { const newDocument = { id: result.fileId, name: result.originalName }; dispatch({ type: 'ADD_DOCUMENT', payload: { entityType, entityId: entity.id, document: newDocument } }); addNotification('המסמך הועלה בהצלחה'); } else if (result.error) { addNotification(`שגיאה בהעלאת קובץ: ${result.error}`, 'error'); } setIsUploading(false); }; const openDoc = (fileId) => window.electronAPI.openDocument(fileId); return ( <div className="card" style={{ marginTop: '20px' }}><h3><i className="fas fa-folder-open"></i> מסמכים</h3>{(entity.documents && entity.documents.length > 0) ? (<ul className="document-list">{entity.documents.map(doc => (<li key={doc.id} className="document-list-item"><a onClick={() => openDoc(doc.id)}><i className="fas fa-file-alt"></i> {doc.name}</a></li>))}</ul>) : <p>אין מסמכים משוייכים.</p>} <button onClick={handleFileUpload} disabled={isUploading} style={{ marginTop: '10px' }}>{isUploading ? <><i className="fas fa-spinner fa-spin"></i> מעלה...</> : <><i className="fas fa-upload"></i> העלה מסמך חדש</>}</button></div> ); };
+        const CommandPalette = ({ isOpen, onClose }) => { const { state, dispatch } = useAppContext(); const [searchTerm, setSearchTerm] = useState(""); const [results, setResults] = useState([]); const [selectedIndex, setSelectedIndex] = useState(0); const inputRef = useRef(null); const fuseRef = useRef(null); useEffect(() => { if (isOpen) { inputRef.current?.focus(); setSearchTerm(""); setResults([]); } }, [isOpen]); useEffect(() => { const allItems = [ ...(state.tenants || []).map(t => ({ type: 'Tenant', name: t.name, id: t.id })), ...(state.properties || []).map(p => ({ type: 'Property', name: p.address, id: p.id })), ...(state.events || []).map(e => ({ type: 'Event', name: e.title, id: e.id })) ]; fuseRef.current = new Fuse(allItems, { keys: ['name'], includeScore: true, threshold: 0.4 }); }, [state.tenants, state.properties, state.events]); useEffect(() => { const handler = setTimeout(() => { if (searchTerm) { const searchResults = fuseRef.current.search(searchTerm).map(result => result.item); setResults(searchResults.slice(0, 10)); } else { setResults([]); } setSelectedIndex(0); }, 200); return () => clearTimeout(handler); }, [searchTerm]); const handleKeyDown = (e) => { if (e.key === 'ArrowDown') { setSelectedIndex(prev => Math.min(prev + 1, results.length - 1)); } else if (e.key === 'ArrowUp') { setSelectedIndex(prev => Math.max(prev - 1, 0)); } else if (e.key === 'Enter' && results[selectedIndex]) { handleSelect(results[selectedIndex]); } }; const handleSelect = (item) => { switch(item.type) { case 'Tenant': dispatch({ type: 'CHANGE_VIEW', payload: { page: 'tenantDetail', params: { id: item.id } } }); break; case 'Property': dispatch({ type: 'CHANGE_VIEW', payload: { page: 'propertyDetail', params: { id: item.id } } }); break; case 'Event': dispatch({ type: 'CHANGE_VIEW', payload: { page: 'calendar' } }); break; } onClose(); }; if (!isOpen) return null; return (<div className="modal-overlay" onClick={onClose}><div className="modal-content command-palette" onClick={e=>e.stopPropagation()}><div className="command-palette-input-wrapper"><input ref={inputRef} className="command-palette-input" value={searchTerm} onChange={e => setSearchTerm(e.target.value)} onKeyDown={handleKeyDown} placeholder="חפש הכל..." /><span className="command-palette-count">{results.length} תוצאות</span></div><div className="command-palette-results">{results.map((item, index) => ( <div key={item.id} className={`command-palette-item ${selectedIndex === index ? 'selected' : ''}`} onClick={() => handleSelect(item)} onMouseEnter={() => setSelectedIndex(index)}> <i className={`fas ${item.type === 'Tenant' ? 'fa-user' : item.type === 'Property' ? 'fa-home' : 'fa-calendar-check'} icon`}></i> <div><strong>{item.name}</strong><br/><small>{item.type}</small></div> </div> ))}</div></div></div>); };
+        const FloatingActionButton = ({ onAction }) => { const [isOpen, setIsOpen] = useState(false); const items = [ { icon: 'fa-user-plus', label: 'שוכר', action: 'tenant' }, { icon: 'fa-house-medical', label: 'נכס', action: 'property' }, { icon: 'fa-calendar-plus', label: 'אירוע', action: 'event' }, { icon: 'fa-dollar-sign', label: 'תשלום', action: 'payment' } ]; return (<div className="fab-container"> {isOpen && <div className="fab-menu"> {items.map((item, i) => ( <div key={item.action} className={`fab-menu-item ${isOpen ? 'visible' : ''}`} style={{'--delay': `${i * 0.05}s`}} onClick={() => {onAction(item.action); setIsOpen(false);}}> <span className="label">{item.label}</span> <div className="fab-icon"><i className={`fas ${item.icon}`}></i></div> </div> ))} </div>} <button className={`fab ${isOpen ? 'open' : ''}`} onClick={() => setIsOpen(!isOpen)}><i className="fas fa-plus"></i></button> </div>); };
+        const EmptyStateLottie = ({ animationUrl, message, actionText, onAction }) => ( <div className="empty-state-lottie card"> <lottie-player src={animationUrl} background="transparent" speed="1" style={{width: '200px', height: '200px'}} loop autoplay></lottie-player> <p>{message}</p> {onAction && <button className="primary" onClick={onAction}>{actionText}</button>} </div> );
+        
+        // --- MAIN VIEWS / TABS ---
+        const Dashboard = () => {
+            const { state, dispatch } = useAppContext();
+            const { properties, tenants, payments, settings } = state;
+
+            const overdueTenants = useMemo(() => {
+                const today = new Date();
+                const currentDayOfMonth = today.getDate();
+                const currentMonth = today.getMonth();
+                const currentYear = today.getFullYear();
+                return (tenants || []).filter(t => {
+                    if (!t.is_active || !t.monthly_rent || t.monthly_rent <= 0) return false;
+                    const dueDay = t.rent_due_day || 1;
+                    if (currentDayOfMonth < dueDay) return false;
+                    return !payments.some(p => p.tenant_id === t.id && new Date(p.date).getMonth() === currentMonth && new Date(p.date).getFullYear() === currentYear);
+                });
+            }, [tenants, payments]);
+
+            const upcomingExpiries = useMemo(() => { const today = new Date(); return (tenants || []).filter(t => { if (!t.is_active || !t.contract_end_date) return false; const endDate = new Date(t.contract_end_date); const daysUntil = Math.round((endDate - today) / (1000 * 60 * 60 * 24)); return daysUntil >= 0 && daysUntil <= (settings.notifyLeaseDays || 30); }).sort((a,b) => new Date(a.contract_end_date) - new Date(b.contract_end_date)); }, [tenants, settings]);
+            
+            const activeTenants = (tenants || []).filter(t => t.is_active);
+            const monthlyIncome = activeTenants.reduce((sum, t) => sum + (Number(t.monthly_rent) || 0), 0);
+            const occupancyRate = (properties || []).length > 0 ? ((new Set(activeTenants.filter(t => t.property_id).map(t => t.property_id)).size) / properties.length) * 100 : 0;
+            
+            const incomeByMonth = useMemo(() => {
+                return Array.from({length: 6}, (_, i) => {
+                    const d = new Date();
+                    d.setMonth(d.getMonth() - i);
+                    const monthKey = d.toLocaleDateString('he-IL', { month: 'short', year: '2-digit'});
+                    const income = (payments || []).reduce((acc, p) => {
+                        if (new Date(p.date).toLocaleDateString('he-IL', { month: 'short', year: '2-digit'}) === monthKey) {
+                            return acc + Number(p.amount);
+                        }
+                        return acc;
+                    }, 0);
+                    return { monthKey, income };
+                }).reverse();
+            }, [payments]);
+
+            const incomeExpenseData = useMemo(() => { 
+                const labels = incomeByMonth.map(item => item.monthKey);
+                const incomeData = incomeByMonth.map(item => item.income);
+                const expenseByMonth = (state.expenses || []).reduce((acc, e) => { const monthKey = new Date(e.date).toLocaleDateString('he-IL', { month: 'short', year: '2-digit'}); acc[monthKey] = (acc[monthKey] || 0) + Number(e.amount); return acc; }, {}); 
+                return { labels, datasets: [ { label: 'הכנסות', data: labels.map(l => incomeData[labels.indexOf(l)] || 0), backgroundColor: settings.graphColor || '#22c55e', borderRadius: 4 }, { label: 'הוצאות', data: labels.map(l => expenseByMonth[l] || 0), backgroundColor: 'rgba(220, 53, 69, 0.7)', borderRadius: 4 }, ] }; 
+            }, [incomeByMonth, state.expenses, settings.graphColor]);
+
+            const propertyTypesData = useMemo(() => { const types = (properties || []).reduce((acc, p) => { const type = p.property_type || 'לא צוין'; acc[type] = (acc[type] || 0) + 1; return acc; }, {}); return { labels: Object.keys(types), datasets: [{ data: Object.values(types), backgroundColor: ['#ff6384', '#36a2eb', '#ffce56', '#4bc0c0', '#9966ff'] }] }; }, [properties]);
+            
+            const animatedPropertiesValue = useCountUp((properties || []).length);
+            const animatedTenantsValue = useCountUp(activeTenants.length);
+            const animatedIncomeValue = useCountUp(monthlyIncome);
+            const animatedOccupancyValue = useCountUp(occupancyRate);
+
+            const displayedProperties = settings.animationsEnabled ? animatedPropertiesValue : (properties || []).length;
+            const displayedTenants = settings.animationsEnabled ? animatedTenantsValue : activeTenants.length;
+            const displayedIncome = settings.animationsEnabled ? animatedIncomeValue : monthlyIncome;
+            const displayedOccupancy = settings.animationsEnabled ? animatedOccupancyValue : occupancyRate;
+
+            const incomeTrend = useMemo(() => {
+                if (incomeByMonth.length < 2) return null;
+                const currentMonthIncome = incomeByMonth[incomeByMonth.length - 1].income;
+                const prevMonthIncome = incomeByMonth[incomeByMonth.length - 2].income;
+                if (currentMonthIncome > prevMonthIncome) return 'up';
+                if (currentMonthIncome < prevMonthIncome) return 'down';
+                return 'stable';
+            }, [incomeByMonth]);
+            
+            const chartOptions = useMemo(() => ({
+                responsive: true,
+                maintainAspectRatio: false,
+                animation: { duration: 0 },
+                scales: { y: { beginAtZero: true } }
+            }), []);
+
+            return (
+                <div className="dashboard-grid">
+                    <div className="card chart-income-expense">
+                        <h3>הכנסות מול הוצאות (6 חודשים)</h3>
+                        <ChartComponent type="bar" data={incomeExpenseData} options={chartOptions} />
+                    </div>
+                    <div className="card chart-property-types">
+                        <h3>סוגי נכסים</h3>
+                        <ChartComponent type="pie" data={propertyTypesData} options={{...chartOptions, scales: {}}} />
+                    </div>
+                    <div className="card kpi-card kpi-properties" onClick={() => dispatch({type: 'CHANGE_VIEW', payload: {page: 'properties'}})}>
+                        <div className="kpi-value">{displayedProperties}</div>
+                        <div className="kpi-header label">נכסים בניהול</div>
+                    </div>
+                    <div className="card kpi-card kpi-tenants" onClick={() => dispatch({type: 'CHANGE_VIEW', payload: {page: 'tenants'}})}>
+                        <div className="kpi-value">{displayedTenants}</div>
+                        <div className="label">שוכרים פעילים</div>
+                    </div>
+                    <div className="card kpi-card kpi-income">
+                        <div className="kpi-value">{formatCurrency(displayedIncome, settings.currencySymbol)}</div>
+                        <div className="label">הכנסה חודשית צפויה</div>
+                        <div className="kpi-trend">
+                            {incomeTrend === 'up' && <span style={{color: 'var(--green-color)'}}>▲</span>}
+                            {incomeTrend === 'down' && <span style={{color: 'var(--red-color)'}}>▼</span>}
+                            <Sparkline data={incomeByMonth.map(i => i.income)} color={settings.graphColor} />
+                        </div>
+                    </div>
+                    <div className="card kpi-card kpi-occupancy">
+                        <div className="kpi-value">{Math.round(displayedOccupancy)}%</div>
+                        <div className="label">שיעור אכלוס</div>
+                    </div>
+                    <div className="card widget-overdue">
+                        <h3><i className="fas fa-file-invoice-dollar" style={{color: 'var(--red-color)'}}></i> שכר דירה באיחור</h3>
+                        {overdueTenants.length > 0 ? (<ul className="widget-list">{overdueTenants.map(t => <li key={t.id} onClick={() => dispatch({type: 'CHANGE_VIEW', payload:{page: 'tenantDetail', params:{id:t.id}}})}><span>{t.name}</span> <span style={{color: 'var(--red-color)'}}>{formatCurrency(t.monthly_rent, settings.currencySymbol)}</span></li>)}</ul>) : <p>כל התשלומים התקבלו בזמן.</p>}
+                    </div>
+                    <div className="card widget-expiring">
+                        <h3><i className="fas fa-exclamation-triangle" style={{color: 'var(--yellow-color)'}}></i> חוזים שמסתיימים בקרוב</h3>
+                        {upcomingExpiries.length > 0 ? (<ul className="widget-list">{upcomingExpiries.map(t => <li key={t.id} onClick={() => dispatch({type: 'CHANGE_VIEW', payload:{page: 'tenantDetail', params:{id:t.id}}})}><span>{t.name}</span> <span>{formatDate(t.contract_end_date)}</span></li>)}</ul>) : <p>אין חוזים שמסתיימים בקרוב.</p>}
+                    </div>
+                </div>
+            );
+        };
+        const TenantsTab = () => { const { state, dispatch, addNotification, setUndoableAction } = useAppContext(); const { tenants, properties, payments, settings } = state; const [showModal, setShowModal] = useState(false); const [editingTenant, setEditingTenant] = useState(null); const [filter, setFilter] = useState({ searchTerm: '', status: 'active' }); const [selectedTenants, setSelectedTenants] = useState([]); const [showConfirm, setShowConfirm] = useState(false); const [payingTenant, setPayingTenant] = useState(null); const [isQuickPaying, setIsQuickPaying] = useState(null); const handleSaveTenant = (tenantData) => { if(editingTenant) { dispatch({ type: 'UPDATE_TENANT', payload: { id: editingTenant.id, updates: tenantData }}); } else { dispatch({ type: 'ADD_TENANT', payload: tenantData }); } setShowModal(false); setEditingTenant(null); }; const getTenantStatus = (tenant) => { if (!tenant.is_active) return { text: 'בארכיון', class: 'archived' }; const currentMonth = today.getMonth(); const currentYear = today.getFullYear(); const hasPaid = payments.some(p => p.tenant_id === tenant.id && new Date(p.date).getMonth() === currentMonth && new Date(p.date).getFullYear() === currentYear); if (hasPaid) return { text: 'שולם', class: 'paid' }; const dueDay = tenant.rent_due_day || 1; const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate(); const dueDate = new Date(currentYear, currentMonth, Math.min(dueDay, daysInMonth)); const daysDiff = Math.round((dueDate - today) / (1000 * 60 * 60 * 24)); if (daysDiff < 0) return { text: `באיחור (${Math.abs(daysDiff)} ימים)`, class: 'unpaid' }; if (daysDiff <= 7) return { text: `בעוד ${daysDiff} ימים`, class: 'due-soon' }; return { text: 'OK', class: 'ok' }; }; const tenantsToDisplay = useMemo(() => { return (tenants || []).filter(t => { const searchMatch = filter.searchTerm === '' || t.name.toLowerCase().includes(filter.searchTerm.toLowerCase()) || (t.phone && t.phone.includes(filter.searchTerm)) || (t.id_number && t.id_number.includes(filter.searchTerm)); const statusMatch = filter.status === 'all' || (filter.status === 'active' ? t.is_active : !t.is_active); return searchMatch && statusMatch; }).map(t => ({...t, propertyAddress: (properties || []).find(p => p.id === t.property_id)?.address || 'לא משוייך', paymentStatus: getTenantStatus(t) })); }, [tenants, properties, payments]); const handleSelectItem = (id) => setSelectedTenants(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]); const handleSelectAll = (e) => setSelectedTenants(e.target.checked ? tenantsToDisplay.map(t => t.id) : []); const handleBulkArchive = () => { const originalTenants = [...tenants]; dispatch({ type: 'ARCHIVE_TENANTS_BULK', payload: selectedTenants }); setUndoableAction({ type: 'UNDO_ARCHIVE_TENANTS', payload: originalTenants }); setSelectedTenants([]); setShowConfirm(false); }; const handleQuickPay = (tenant) => { setIsQuickPaying(tenant.id); setTimeout(() => { dispatch({ type: 'ADD_PAYMENT', payload: { tenant_id: tenant.id, amount: tenant.monthly_rent, date: todayStr } }); addNotification(`תשלום עבור ${tenant.name} נרשם בהצלחה.`); setIsQuickPaying(null); }, 300); }; const handleSendReminder = (tenant) => { const property = properties.find(p => p.id === tenant.property_id); const subject = `תזכורת תשלום שכירות עבור ${property?.address || 'הנכס'}`; const body = `שלום ${tenant.name},\n\nזוהי תזכורת ידידותית לתשלום שכר הדירה בסך ${formatCurrency(tenant.monthly_rent, settings.currencySymbol)}.\n\nתודה,\nמערכת ניהול שכירות`; const mailtoLink = `mailto:${tenant.email || ''}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`; window.electronAPI.openExternalLink(mailtoLink); }; return (<div>{selectedTenants.length > 0 && (<div className="bulk-action-bar"><span>{selectedTenants.length} שוכרים נבחרו</span><button className="danger" onClick={() => setShowConfirm(true)}><i className="fas fa-archive"></i> העבר לארכיון</button></div>)}<div className="table-controls"><div className="table-filters"><input type="text" className="search-input" placeholder="חפש שוכר..." value={filter.searchTerm} onChange={e => setFilter({...filter, searchTerm: e.target.value})} /><select value={filter.status} onChange={e => setFilter({...filter, status: e.target.value})}><option value="active">פעילים</option><option value="archived">בארכיון</option><option value="all">הכל</option></select></div><button className="primary" onClick={() => { setEditingTenant(null); setShowModal(true); }}><i className="fas fa-plus"></i> הוסף שוכר</button></div><div className="card">{tenantsToDisplay.length > 0 ? <SortableDataTable selectable headers={[{ key: 'name', label: 'שם', sortable: true}, { key: 'id_number', label: 'ת.ז.', sortable: true}, { key: 'propertyAddress', label: 'נכס', sortable: true}, { key: 'monthly_rent', label: 'שכ"ד', sortable: true}, { key: 'paymentStatus', label: 'סטטוס תשלום'}, {key:'actions', label:''}]} data={tenantsToDisplay} selectedItems={selectedTenants} onSelectItem={handleSelectItem} onSelectAll={handleSelectAll} renderRow={(t, i, selection) => (<tr key={t.id}><td onClick={(e) => e.stopPropagation()}><input type="checkbox" checked={selection.selected} onChange={selection.onSelect} /></td><td style={{cursor:'pointer'}} onClick={() => dispatch({type: 'CHANGE_VIEW', payload: { page: 'tenantDetail', params: { id: t.id } } })}>{t.name}</td><td>{t.id_number || '—'}</td><td style={{cursor:'pointer'}} onClick={() => t.property_id && dispatch({type: 'CHANGE_VIEW', payload: { page: 'propertyDetail', params: { id: t.property_id } } })}>{t.propertyAddress}</td><td>{formatCurrency(t.monthly_rent, settings.currencySymbol)}</td><td><span className={`status-pill ${t.paymentStatus.class}`}>{t.paymentStatus.text}</span></td><td><div className="row-actions">{t.paymentStatus.class === 'unpaid' && <button onClick={(e) => {e.stopPropagation(); handleSendReminder(t);}} title="שלח תזכורת"><i className="fas fa-envelope"></i></button>}{t.paymentStatus.class !== 'paid' && t.is_active && <div className="quick-payment-btn-group"><button className="success main-btn" style={{padding: '4px 8px', fontSize: '0.8rem'}} onClick={(e) => {e.stopPropagation(); handleQuickPay(t);}} disabled={isQuickPaying === t.id}>{isQuickPaying === t.id ? <i className="fas fa-spinner fa-spin"></i> : <i className="fas fa-check"></i>}</button><button className="success dropdown-btn" onClick={(e) => {e.stopPropagation(); setPayingTenant(t);}}><i className="fas fa-caret-down"></i></button></div>}<button onClick={(e) => {e.stopPropagation(); setEditingTenant(t); setShowModal(true);}}><i className="fas fa-edit"></i></button></div></td></tr>)} /> : <EmptyStateLottie animationUrl="https://lottie.host/91a01949-3512-4f6b-8735-19a175a89d31/i5pxf0FQGq.json" message="לא נמצאו שוכרים." actionText="הוסף שוכר חדש" onAction={() => { setEditingTenant(null); setShowModal(true); }} />}</div><Modal isOpen={!!payingTenant} onClose={()=>setPayingTenant(null)} title={`רישום תשלום עבור ${payingTenant?.name}`}><PaymentForm payment={{amount: payingTenant?.monthly_rent, date: todayStr, tenant_id: payingTenant?.id}} tenants={tenants} onSave={(data) => { dispatch({ type: 'ADD_PAYMENT', payload: data }); addNotification('תשלום נרשם בהצלחה'); setPayingTenant(null); }} onClose={()=>setPayingTenant(null)} /></Modal><Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editingTenant ? "עריכת שוכר" : "הוספת שוכר חדש"}><TenantForm tenant={editingTenant} properties={properties} onSave={handleSaveTenant} onClose={() => setShowModal(false)} /></Modal><ConfirmModal isOpen={showConfirm} onClose={()=>setShowConfirm(false)} onConfirm={handleBulkArchive} title="העברה לארכיון" message={`האם להעביר ${selectedTenants.length} שוכרים לארכיון?`} /></div>); };
+        const PropertiesTab = () => { const { state, dispatch, setUndoableAction } = useAppContext(); const { properties, tenants, settings } = state; const [showModal, setShowModal] = useState(false); const [editingProperty, setEditingProperty] = useState(null); const [searchTerm, setSearchTerm] = useState(''); const [selectedProperties, setSelectedProperties] = useState([]); const [showConfirm, setShowConfirm] = useState(false); const handleSaveProperty = (propertyData) => { if(editingProperty) { dispatch({ type: 'UPDATE_PROPERTY', payload: { id: editingProperty.id, updates: propertyData }}); } else { dispatch({ type: 'ADD_PROPERTY', payload: propertyData }); } setShowModal(false); setEditingProperty(null); }; const propertiesToDisplay = useMemo(() => { return (properties || []).filter(p => searchTerm === '' || p.address.toLowerCase().includes(searchTerm.toLowerCase())).map(p => { const activeTenants = (tenants || []).filter(t => t.property_id === p.id && t.is_active); return { ...p, tenantCount: activeTenants.length, income: activeTenants.reduce((sum, t) => sum + (Number(t.monthly_rent) || 0), 0) }; }); }, [properties, tenants, searchTerm]); const handleSelectItem = (id) => setSelectedProperties(prev => prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]); const handleSelectAll = (e) => setSelectedProperties(e.target.checked ? propertiesToDisplay.map(p => p.id) : []); const handleBulkDelete = () => { const originalProperties = [...properties]; dispatch({ type: 'DELETE_PROPERTIES_BULK', payload: selectedProperties }); setUndoableAction({ type: 'UNDO_DELETE_PROPERTIES', payload: originalProperties }); setSelectedProperties([]); setShowConfirm(false); }; return (<div>{selectedProperties.length > 0 && (<div className="bulk-action-bar"><span>{selectedProperties.length} נכסים נבחרו</span><button className="danger" onClick={() => setShowConfirm(true)}><i className="fas fa-trash"></i> מחק נכסים</button></div>)}<div className="table-controls"><input type="text" className="search-input" placeholder="חפש כתובת..." value={searchTerm} onChange={e => setSearchTerm(e.target.value)} /><button className="primary" onClick={() => { setEditingProperty(null); setShowModal(true); }}><i className="fas fa-plus"></i> הוסף נכס</button></div><div className="card">{propertiesToDisplay.length > 0 ? <SortableDataTable selectable headers={[{ key: 'address', label: 'כתובת', sortable: true}, { key: 'tenantCount', label: 'דיירים פעילים', sortable: true}, { key: 'income', label: 'הכנסה חודשית', sortable: true}, {key:'actions', label:''}]} data={propertiesToDisplay} selectedItems={selectedProperties} onSelectItem={handleSelectItem} onSelectAll={handleSelectAll} renderRow={(p, i, selection) => (<tr key={p.id}><td><input type="checkbox" checked={selection.selected} onChange={selection.onSelect} /></td><td style={{cursor:'pointer'}} onClick={() => dispatch({type: 'CHANGE_VIEW', payload: { page: 'propertyDetail', params: { id: p.id } } })}>{p.address}</td><td>{p.tenantCount}</td><td>{formatCurrency(p.income, settings.currencySymbol)}</td><td><div className="row-actions"><button onClick={(e) => {e.stopPropagation(); setEditingProperty(p); setShowModal(true);}}><i className="fas fa-edit"></i></button></div></td></tr>)} /> : <EmptyStateLottie animationUrl="https://lottie.host/b2c2b648-0c33-4731-8e90-264b3e75815d/aG4s4s4R3g.json" message="לא נמצאו נכסים." actionText="הוסף נכס חדש" onAction={() => { setEditingProperty(null); setShowModal(true); }}/>}</div><Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editingProperty ? "עריכת נכס" : "הוספת נכס חדש"}><PropertyForm property={editingProperty} onSave={handleSaveProperty} onClose={() => setShowModal(false)} /></Modal><ConfirmModal isOpen={showConfirm} onClose={()=>setShowConfirm(false)} onConfirm={handleBulkDelete} title="מחיקת נכסים" message={`האם למחוק ${selectedProperties.length} נכסים? פעולה זו אינה הפיכה.`} /></div>); };
+        const EventsTab = () => { const { state, dispatch } = useAppContext(); const { events, tenants } = state; const [showModal, setShowModal] = useState(false); const [editingEvent, setEditingEvent] = useState(null); const handleSaveEvent = (eventData) => { if(editingEvent) { dispatch({ type: 'UPDATE_EVENT', payload: { id: editingEvent.id, updates: eventData }}); } else { dispatch({ type: 'ADD_EVENT', payload: eventData }); } setShowModal(false); setEditingEvent(null); }; const eventsWithDetails = useMemo(() => (events || []).map(e => ({ ...e, tenantName: (tenants || []).find(t => t.id === e.tenant_id)?.name || 'כללי' })).sort((a,b) => new Date(b.date) - new Date(a.date)), [events, tenants]); return (<div><div className="table-controls"><div/><button className="primary" onClick={() => { setEditingEvent(null); setShowModal(true); }}><i className="fas fa-plus"></i> הוסף אירוע</button></div><div className="card">{eventsWithDetails.length > 0 ? <SortableDataTable headers={[{key:'date', label:'תאריך'}, {key:'title', label:'כותרת'}, {key:'type', label:'סוג'}, {key:'tenantName', label:'שיוך'}, {key:'actions', label:'פעולות'}]} data={eventsWithDetails} renderRow={e => (<tr key={e.id}><td>{formatDate(e.date)}</td><td>{e.title}</td><td>{e.type}</td><td>{e.tenantName}</td><td><button onClick={() => { setEditingEvent(e); setShowModal(true); }}>ערוך</button><button className="danger" onClick={() => dispatch({ type: 'DELETE_EVENT', payload: e.id })}>מחק</button></td></tr>)} /> : <EmptyState icon="fa-calendar-check" message="לא נמצאו אירועים." actionText="הוסף אירוע חדש" onAction={() => setShowModal(true)}/>}</div><Modal isOpen={showModal} onClose={() => setShowModal(false)} title={editingEvent ? "עריכת אירוע" : "הוספת אירוע חדש"}><EventForm event={editingEvent} tenants={tenants} onSave={handleSaveEvent} onClose={() => setShowModal(false)} /></Modal></div>); };
+        const FinancialsTab = () => { const { state, dispatch, addNotification } = useAppContext(); const { payments, expenses, tenants, properties, settings } = state; const [showExpenseModal, setShowExpenseModal] = useState(false); const [showPaymentModal, setShowPaymentModal] = useState(false); const [expandedRow, setExpandedRow] = useState(null); const allTransactions = useMemo(() => { const income = (payments || []).map(p => ({ ...p, type: 'income', description: `תשלום שכירות`, tenantName: (tenants || []).find(t=>t.id===p.tenant_id)?.name || '' })); const outcome = (expenses || []).map(e => ({ ...e, type: 'expense', propertyName: (properties || []).find(p=>p.id===e.property_id)?.address || ''})); return [...income, ...outcome].sort((a,b) => new Date(b.date) - new Date(a.date)); }, [payments, expenses, tenants, properties]); const totalIncome = useMemo(() => (payments || []).reduce((sum, p) => sum + Number(p.amount), 0), [payments]); const totalExpenses = useMemo(() => (expenses || []).reduce((sum, e) => sum + Number(e.amount), 0), [expenses]); return (<div><div className="table-controls"><div/><div className="actions"><button className="success" onClick={() => setShowPaymentModal(true)}><i className="fas fa-plus"></i> הוסף הכנסה</button><button className="danger" onClick={() => setShowExpenseModal(true)}><i className="fas fa-plus"></i> הוסף הוצאה</button></div></div><div className="dashboard-grid" style={{marginBottom: '20px'}}><div className="card kpi-card"><h3>סך הכנסות</h3><div className="kpi-value" style={{color: 'var(--green-color)'}}>{formatCurrency(totalIncome, settings.currencySymbol)}</div></div><div className="card kpi-card"><h3>סך הוצאות</h3><div className="kpi-value" style={{color: 'var(--red-color)'}}>{formatCurrency(totalExpenses, settings.currencySymbol)}</div></div><div className="card kpi-card"><h3>מאזן</h3><div className="kpi-value">{formatCurrency(totalIncome - totalExpenses, settings.currencySymbol)}</div></div></div><div className="card"><table className="data-table"><thead><tr><th>תאריך</th><th>תיאור</th><th>קטגוריה/שוכר</th><th>סכום</th></tr></thead><tbody>{allTransactions.map(tx => (<React.Fragment key={`${tx.type}-${tx.id}`}><tr onClick={() => setExpandedRow(expandedRow === tx.id ? null : tx.id)} style={{cursor: 'pointer'}}><td>{formatDate(tx.date)}</td><td>{tx.description}</td><td>{tx.type === 'income' ? tx.tenantName : tx.category}</td><td style={{color: tx.type === 'income' ? 'var(--green-color)' : 'var(--red-color)'}}>{formatCurrency(tx.amount, settings.currencySymbol)}</td></tr>{expandedRow === tx.id && (<tr><td colSpan="4" style={{background: 'var(--bg-color)'}}><b>פרטים:</b> {tx.type === 'income' ? `שולם ע"י ${tx.tenantName}` : `הוצאה עבור ${tx.propertyName || 'כללי'}`}</td></tr>)}</React.Fragment>))}</tbody></table></div><Modal isOpen={showExpenseModal} onClose={() => setShowExpenseModal(false)} title="הוספת הוצאה חדשה"><ExpenseForm properties={properties} onSave={(data) => { dispatch({ type: 'ADD_EXPENSE', payload: data }); setShowExpenseModal(false); addNotification('הוצאה נוספה'); }} onClose={() => setShowExpenseModal(false)} /></Modal><Modal isOpen={showPaymentModal} onClose={() => setShowPaymentModal(false)} title="הוספת הכנסה חדשה"><PaymentForm tenants={tenants} onSave={(data) => { dispatch({ type: 'ADD_PAYMENT', payload: data }); setShowPaymentModal(false); addNotification('הכנסה נוספה'); }} onClose={() => setShowPaymentModal(false)} /></Modal></div>); };
+        const SettingsPage = () => { const { state, dispatch, addNotification } = useAppContext(); const { settings, ...dataToBackup } = state; const [localSettings, setLocalSettings] = useState(settings); const [newField, setNewField] = useState({ label: '', type: 'Text', entity: 'Tenant' }); const healthIssues = useMemo(() => { const issues = []; const today = new Date(); (state.tenants || []).forEach(t => { if (t.is_active && t.contract_end_date && new Date(t.contract_end_date) < today) { issues.push({ id: t.id, type: 'tenant', text: `לשוכר ${t.name} יש חוזה שפג תוקף אך הוא עדיין פעיל.` }); } if (t.is_active && !t.property_id) { issues.push({ id: t.id, type: 'tenant', text: `השוכר הפעיל ${t.name} אינו משויך לנכס.` }); } }); (state.payments || []).forEach(p => { const tenant = state.tenants.find(t => t.id === p.tenant_id); if (tenant && !tenant.is_active) { issues.push({ id: tenant.id, type: 'tenant', text: `נרשם תשלום עבור ${tenant.name} למרות שהוא בארכיון.` }); } }); return issues; }, [state.tenants, state.payments]); useEffect(() => { setLocalSettings(state.settings) }, [state.settings]); const handleChange = e => { const { name, value, type, checked } = e.target; setLocalSettings(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value })); }; const handleSave = async () => { const result = await dataManager.saveSettings(localSettings); if (result.success) { dispatch({ type: 'REPLACE_SETTINGS', payload: localSettings }); addNotification('ההגדרות נשמרו'); } else { addNotification('שגיאה בשמירת ההגדרות', 'error'); } }; const handleTenantImport = async () => { const result = await window.electronAPI.importCSV('tenants'); if(result.success) { if(result.data.length > 0 && 'name' in result.data[0]) { const newTenants = result.data.map(row => ({ id: uuidv4(), name: row.name || 'N/A', monthly_rent: parseFloat(row.monthly_rent) || 0, contract_start_date: row.contract_start_date || '', contract_end_date: row.contract_end_date || '', is_active: true, documents: [], id_number: row.id_number || '', phone: row.phone || '', address: row.address || '', deposit: parseFloat(row.deposit) || 0, comments: row.comments || '' })); dispatch({ type: 'ADD_TENANTS_BULK', payload: newTenants }); addNotification(`${newTenants.length} שוכרים יובאו בהצלחה`); } else { addNotification('קובץ CSV לא תקין או חסרה עמודת "name"', 'error'); } } else if(result.error) { addNotification(`שגיאה בייבוא: ${result.error}`, 'error'); } }; const handlePropertyImport = async () => { const result = await window.electronAPI.importCSV('properties'); if(result.success) { if(result.data.length > 0 && 'address' in result.data[0]) { const newProperties = result.data.map(row => ({ id: uuidv4(), address: row.address || 'N/A', property_type: row.property_type || 'דירה', electricity_meter: row.electricity_meter || '', water_meter: row.water_meter || '', comments: row.comments || '', documents: [] })); dispatch({ type: 'ADD_PROPERTIES_BULK', payload: newProperties }); addNotification(`${newProperties.length} נכסים יובאו בהצלחה`); } else { addNotification('קובץ CSV לא תקין או חסרה עמודת "address"', 'error'); } } else if(result.error) { addNotification(`שגיאה בייבוא: ${result.error}`, 'error'); } }; const handleRestore = async () => { const result = await window.electronAPI.restoreDataFromBackup(); if (result.success) { const currentSettings = state.settings; dispatch({type: 'REPLACE_DATA_AND_SETTINGS', payload: { data: result.data, settings: currentSettings }}); addNotification('הנתונים שוחזרו בהצלחה מהגיבוי.', 'success'); } else if (result.error !== 'Restore canceled by user.') { addNotification(`שגיאה בשחזור: ${result.error}`, 'error'); } }; const handleAddField = () => { if (newField.label.trim()) { const updatedFields = [...(localSettings.customFields || []), { ...newField, id: uuidv4() }]; setLocalSettings(prev => ({ ...prev, customFields: updatedFields })); setNewField({ label: '', type: 'Text', entity: 'Tenant' }); } }; const handleDeleteField = (id) => { const updatedFields = localSettings.customFields.filter(f => f.id !== id); setLocalSettings(prev => ({ ...prev, customFields: updatedFields })); }; return(<div className="settings-grid"><div className="card"><h2>הגדרות כלליות</h2><div className="form-group"><label>צבע מערכת</label><input type="color" name="accentColor" value={localSettings.accentColor || '#0d6efd'} onChange={handleChange} style={{padding: 0, height: '40px'}}/></div><div className="form-group"><label>צבע הכנסות בגרפים</label><input type="color" name="graphColor" value={localSettings.graphColor || '#22c55e'} onChange={handleChange} style={{padding: 0, height: '40px'}}/></div><div className="form-group"><label>מטבע</label><select name="currencySymbol" value={localSettings.currencySymbol} onChange={handleChange}><option value="₪">שקל (₪)</option><option value="€">אירו (€)</option></select></div><h3>התראות</h3><div className="form-group"><label><input type="checkbox" name="notifyLeaseExpiry" checked={localSettings.notifyLeaseExpiry} onChange={handleChange} /> הצג התראות על סיום חוזה</label></div><div className="form-group"><label>הצג התראה (ימים לפני סיום)</label><input type="number" name="notifyLeaseDays" value={localSettings.notifyLeaseDays} onChange={handleChange} /></div><h3>ביצועים</h3><div className="form-group"><label><input type="checkbox" name="animationsEnabled" checked={localSettings.animationsEnabled} onChange={handleChange} /> הפעל אנימציות בלוח הבקרה</label></div><button className="primary" onClick={handleSave}>שמור הגדרות</button></div><div className="card"><h2>ניהול נתונים</h2><button onClick={handleTenantImport}><i className="fas fa-file-csv"></i> יבא שוכרים</button><p><small>כותרות: name, id_number, phone, address, monthly_rent, etc.</small></p><hr/><button onClick={handlePropertyImport}><i className="fas fa-file-csv"></i> יבא נכסים</button><p><small>כותרות: address, property_type, etc.</small></p><hr/><button onClick={() => window.electronAPI.backupData(dataToBackup)}><i className="fas fa-download"></i> גבה נתונים לקובץ...</button><hr/><button className="danger" onClick={handleRestore}><i className="fas fa-undo"></i> שחזר מגיבוי</button><p><small>פעולה זו תחליף את כל הנתונים הנוכחיים.</small></p></div><div className="card"><h2>שדות מותאמים אישית</h2><ul className="widget-list">{(localSettings.customFields || []).map(f => <li key={f.id}><span>{f.label} ({f.entity === 'Tenant' ? 'שוכר' : 'נכס'}, {f.type})</span><button className="danger" onClick={() => handleDeleteField(f.id)}><i className="fas fa-trash"></i></button></li>)}</ul><div style={{display: 'flex', gap: '10px', marginTop: '1rem'}}><input value={newField.label} onChange={e => setNewField({...newField, label: e.target.value})} placeholder="שם השדה" /><select value={newField.type} onChange={e => setNewField({...newField, type: e.target.value})}><option>Text</option><option>Number</option><option>Date</option><option>Yes/No</option></select><select value={newField.entity} onChange={e => setNewField({...newField, entity: e.target.value})}><option value="Tenant">שוכר</option><option value="Property">נכס</option></select><button onClick={handleAddField}>הוסף</button></div></div><div className="card"><h2>בדיקת תקינות נתונים</h2>{healthIssues.length > 0 ? <ul className="widget-list">{healthIssues.map(issue => <li key={issue.id + issue.text} className="health-issue" onClick={() => dispatch({type: 'CHANGE_VIEW', payload: {page: `${issue.type}Detail`, params: {id: issue.id}}})}><span><i className="fas fa-exclamation-triangle" style={{color: 'var(--yellow-color)'}}></i> {issue.text}</span></li>)}</ul> : <p>לא נמצאו בעיות.</p>}</div></div>); };
+        const CalendarTab = () => { const { state, dispatch } = useAppContext(); const [currentDate, setCurrentDate] = useState(new Date()); const [showEventModal, setShowEventModal] = useState(false); const [newEventDate, setNewEventDate] = useState(null); const todayStr = new Date().toISOString().split('T')[0]; const changeMonth = (amount) => setCurrentDate(prev => { const newDate = new Date(prev.getFullYear(), prev.getMonth() + amount, 1); return newDate; }); const handleSaveEvent = (eventData) => { dispatch({ type: 'ADD_EVENT', payload: eventData }); setShowEventModal(false); }; const calendarGrid = useMemo(() => { const year = currentDate.getFullYear(), month = currentDate.getMonth(); const firstDayOfMonth = new Date(year, month, 1).getDay(); const daysInMonth = new Date(year, month + 1, 0).getDate(); const days = Array.from({length: firstDayOfMonth}, (_, i) => ({ key: `prev${i}`, day: null, isOtherMonth: true })); for(let i=1; i <= daysInMonth; i++) days.push({ key: i, day: i, isOtherMonth: false }); const eventsByDate = (state.events || []).reduce((acc, e) => { const dateKey = normalizeDate(e.date); if(dateKey) { (acc[dateKey] = acc[dateKey] || []).push(e); } return acc; }, {}); const contractStartDates = (state.tenants || []).filter(t => t.is_active && t.contract_start_date).map(t => ({ id: `start-${t.id}`, date: normalizeDate(t.contract_start_date), title: `תחילת חוזה - ${t.name}`, type: 'contract' })); const contractEndDates = (state.tenants || []).filter(t => t.is_active && t.contract_end_date).map(t => ({ id: `end-${t.id}`, date: normalizeDate(t.contract_end_date), title: `סיום חוזה - ${t.name}`, type: 'contract' })); [...contractStartDates, ...contractEndDates].forEach(e => { if(e.date) { (eventsByDate[e.date] = eventsByDate[e.date] || []).push(e); } }); return days.map(d => { if (d.day) { const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d.day).padStart(2, '0')}`; return {...d, date: dateStr, events: eventsByDate[dateStr] || []}; } return d; }); }, [currentDate, state.events, state.tenants]); const getEventClass = (type) => { switch(type) { case 'תחזוקה': return 'event-type-maintenance'; case 'חוזה': return 'event-type-contract'; case 'תשלום': return 'event-type-payment'; default: return 'event-type-default'; }}; return (<div className="card calendar-card"><div className="calendar-header"><button onClick={() => changeMonth(-1)}>חודש קודם</button><h3>{currentDate.toLocaleDateString('he-IL', { month: 'long', year: 'numeric'})}</h3><button onClick={() => changeMonth(1)}>חודש הבא</button></div><div className="calendar-grid">{['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'].map(day => <div key={day} className="calendar-day-header">{day}</div>)}{calendarGrid.map(d => (<div key={d.key} className={`calendar-day ${d.isOtherMonth ? 'other-month' : ''} ${d.date === todayStr ? 'today' : ''}`} onClick={() => !d.isOtherMonth && (setNewEventDate(d.date), setShowEventModal(true))}><span>{d.day}</span>{d.events?.map(event => (<div key={event.id} className={`calendar-day-event ${getEventClass(event.type)}`} title={event.title}>{event.title}</div>))}</div>))}</div>{showEventModal && <Modal isOpen={true} onClose={() => setShowEventModal(false)} title="הוספת אירוע חדש"><EventForm event={{date: newEventDate}} tenants={state.tenants} onSave={handleSaveEvent} onClose={() => setShowEventModal(false)} /></Modal>}</div>); };
+        const TenantDetailPage = ({ tenantId }) => { const { state, dispatch, addNotification } = useAppContext(); const [showPaymentModal, setShowPaymentModal] = useState(false); const tenant = state.tenants.find(t => t.id === tenantId); const property = state.properties.find(p => p.id === tenant?.property_id); const payments = state.payments.filter(p => p.tenant_id === tenantId).sort((a,b) => new Date(b.date) - new Date(a.date)); if (!tenant) return <h2>שוכר לא נמצא.</h2>; const handleSavePayment = (paymentData) => { dispatch({ type: 'ADD_PAYMENT', payload: { ...paymentData, tenant_id: tenant.id } }); addNotification('תשלום נרשם בהצלחה'); setShowPaymentModal(false); }; const handleInlineSave = (field, value) => { dispatch({ type: 'UPDATE_TENANT', payload: { id: tenantId, updates: { [field]: value } } }); addNotification('פרטי השוכר עודכנו'); }; const handleCustomInlineSave = (fieldId, value) => { const newCustomData = { ...(tenant.customData || {}), [fieldId]: value }; dispatch({ type: 'UPDATE_TENANT', payload: { id: tenantId, updates: { customData: newCustomData } } }); addNotification('פרטי השוכר עודכנו'); }; const tenantCustomFields = (state.settings.customFields || []).filter(f => f.entity === 'Tenant'); return (<div><div className="detail-page-header"><button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: { page: 'tenants' } })}><i className="fas fa-arrow-right"></i> חזור</button><h2>{tenant.name}</h2><span className={`status-pill ${tenant.is_active ? 'paid' : 'archived'}`}>{tenant.is_active ? 'פעיל' : 'בארכיון'}</span><button className="primary" onClick={() => setShowPaymentModal(true)} style={{marginRight: 'auto'}}><i className="fas fa-plus"></i> רשום תשלום</button></div><div className="dashboard-grid"><div className="card" onClick={() => tenant.property_id && dispatch({type: 'CHANGE_VIEW', payload: {page: 'propertyDetail', params: {id: tenant.property_id}}})} style={{cursor: 'pointer'}}><h3>נכס</h3><p>{property?.address || 'לא משוייך'}</p></div><div className="card"><h3>שכ"ד חודשי</h3><p>{formatCurrency(tenant.monthly_rent, state.settings.currencySymbol)}</p></div><div className="card"><h3>תחילת חוזה</h3><p>{formatDate(tenant.contract_start_date)}</p></div><div className="card"><h3>סיום חוזה</h3><p>{formatDate(tenant.contract_end_date)}</p></div></div><div className="card" style={{marginTop: '20px'}}><h3>פרטי התקשרות וחוזה</h3><div className="detail-info-row"><strong>ת.ז.:</strong><InlineEdit value={tenant.id_number} onSave={(val) => handleInlineSave('id_number', val)} /></div><div className="detail-info-row"><strong>טלפון:</strong><InlineEdit value={tenant.phone} onSave={(val) => handleInlineSave('phone', val)} /></div><div className="detail-info-row"><strong>כתובת:</strong><InlineEdit value={tenant.address} onSave={(val) => handleInlineSave('address', val)} /></div><div className="detail-info-row"><strong>פיקדון:</strong><span>{formatCurrency(0, state.settings.currencySymbol).replace('0', '')}<InlineEdit value={tenant.deposit} type="number" onSave={(val) => handleInlineSave('deposit', val)} /></span></div><div className="detail-info-row"><strong>הערות:</strong><InlineEdit value={tenant.comments} onSave={(val) => handleInlineSave('comments', val)} /></div></div>{tenantCustomFields.length > 0 && <div className="card" style={{marginTop: '20px'}}><h3>פרטים נוספים</h3>{tenantCustomFields.map(field => (<div className="detail-info-row" key={field.id}><strong>{field.label}:</strong><InlineEdit value={tenant.customData?.[field.id]} type={field.type} onSave={(val) => handleCustomInlineSave(field.id, val)} /></div>))}</div>}<DocumentManager entity={tenant} entityType="tenants" /><div className="card" style={{marginTop: '20px'}}><h3>היסטוריית תשלומים</h3>{payments.length > 0 ? <SortableDataTable headers={[{key:'date', label:'תאריך'}, {key:'amount', label:'סכום'}]} data={payments} renderRow={p => (<tr key={p.id}><td>{formatDate(p.date)}</td><td>{formatCurrency(p.amount, state.settings.currencySymbol)}</td></tr>)} /> : <EmptyState icon="fa-receipt" message="לא נמצאו תשלומים." />}</div><Modal isOpen={showPaymentModal} onClose={()=>setShowPaymentModal(false)} title={`רישום תשלום עבור ${tenant.name}`}><PaymentForm payment={{amount: tenant.monthly_rent, date: todayStr}} tenants={[tenant]} onSave={handleSavePayment} onClose={()=>setShowPaymentModal(false)} /></Modal></div>); };
+        const PropertyDetailPage = ({ propertyId }) => { const { state, dispatch, addNotification } = useAppContext(); const property = state.properties.find(p => p.id === propertyId); const tenants = state.tenants.filter(t => t.property_id === propertyId); const expenses = state.expenses.filter(e => e.property_id === propertyId).sort((a,b) => new Date(b.date) - new Date(a.date)); const income = state.payments.filter(p => tenants.some(t => t.id === p.tenant_id)).reduce((sum, p) => sum + Number(p.amount), 0); const expenseTotal = expenses.reduce((sum, e) => sum + Number(e.amount), 0); if (!property) return <h2>נכס לא נמצא.</h2>; const handleInlineSave = (field, value) => { dispatch({ type: 'UPDATE_PROPERTY', payload: { id: propertyId, updates: { [field]: value } } }); addNotification('פרטי הנכס עודכנו'); }; const handleCustomInlineSave = (fieldId, value) => { const newCustomData = { ...(property.customData || {}), [fieldId]: value }; dispatch({ type: 'UPDATE_PROPERTY', payload: { id: propertyId, updates: { customData: newCustomData } } }); addNotification('פרטי הנכס עודכנו'); }; const propertyCustomFields = (state.settings.customFields || []).filter(f => f.entity === 'Property'); return (<div><div className="detail-page-header"><button onClick={() => dispatch({ type: 'CHANGE_VIEW', payload: { page: 'properties' } })}><i className="fas fa-arrow-right"></i> חזור</button><h2>{property.address}</h2></div><div className="dashboard-grid"><div className="card kpi-card"><h3>הכנסות כוללות</h3><div className="kpi-value" style={{color: 'var(--green-color)'}}>{formatCurrency(income, state.settings.currencySymbol)}</div></div><div className="card kpi-card"><h3>הוצאות כוללות</h3><div className="kpi-value" style={{color: 'var(--red-color)'}}>{formatCurrency(expenseTotal, state.settings.currencySymbol)}</div></div><div className="card kpi-card"><h3>מאזן נכס</h3><div className="kpi-value">{formatCurrency(income - expenseTotal, state.settings.currencySymbol)}</div></div></div><div className="card" style={{marginTop: '20px'}}><h3>פרטים נוספים</h3><div className="detail-info-row"><strong>מונה חשמל:</strong><InlineEdit value={property.electricity_meter} onSave={(val) => handleInlineSave('electricity_meter', val)} /></div><div className="detail-info-row"><strong>מונה מים:</strong><InlineEdit value={property.water_meter} onSave={(val) => handleInlineSave('water_meter', val)} /></div><div className="detail-info-row"><strong>הערות:</strong><InlineEdit value={property.comments} onSave={(val) => handleInlineSave('comments', val)} /></div></div>{propertyCustomFields.length > 0 && <div className="card" style={{marginTop: '20px'}}><h3>פרטים נוספים</h3>{propertyCustomFields.map(field => (<div className="detail-info-row" key={field.id}><strong>{field.label}:</strong><InlineEdit value={property.customData?.[field.id]} type={field.type} onSave={(val) => handleCustomInlineSave(field.id, val)} /></div>))}</div>}<DocumentManager entity={property} entityType="properties" /><div className="card" style={{marginTop: '20px'}}><h3>דיירים בנכס</h3><SortableDataTable headers={[{key:'name', label:'שם'}, {key:'status', label:'סטטוס'}]} data={tenants} renderRow={t => (<tr key={t.id} style={{cursor: 'pointer'}} onClick={()=>dispatch({type:'CHANGE_VIEW', payload:{page:'tenantDetail', params:{id:t.id}}})}><td>{t.name}</td><td><span className={`status-pill ${t.is_active ? 'paid' : 'archived'}`}>{t.is_active ? 'פעיל' : 'בארכיון'}</span></td></tr>)} /></div><div className="card" style={{marginTop: '20px'}}><h3>הוצאות לנכס</h3>{expenses.length > 0 ? <SortableDataTable headers={[{key:'date', label:'תאריך'},{key:'description', label:'תיאור'}, {key:'amount', label:'סכום'}]} data={expenses} renderRow={e => (<tr key={e.id}><td>{formatDate(e.date)}</td><td>{e.description}</td><td>{formatCurrency(e.amount, state.settings.currencySymbol)}</td></tr>)} /> : <EmptyState icon="fa-file-invoice-dollar" message="לא נמצאו הוצאות עבור נכס זה."/>}</div></div>); };
+
+        // --- MAIN APP COMPONENT ---
+        const App = () => {
+            const { state, dispatch, addNotification } = useAppContext();
+            const { view, settings } = state;
+            const [isLoading, setIsLoading] = useState(true);
+            const [sidebarCollapsed, setSidebarCollapsed] = useState(window.innerWidth <= 1024);
+            const [isCommandPaletteOpen, setCommandPaletteOpen] = useState(false);
+            const [quickActionModal, setQuickActionModal] = useState(null);
+
+            const stateRef = useRef(state);
+            useEffect(() => { stateRef.current = state; }, [state]);
+
+            const handleSave = async () => {
+                const id = addNotification('שומר...', 'info', 0);
+                const { view, ...dataToSave } = stateRef.current;
+                const result = await dataManager.saveData(dataToSave);
+                addNotification(result.success ? 'הנתונים נשמרו!' : 'שגיאה בשמירה!', result.success ? 'success' : 'error', 2000);
+            };
+
+            useEffect(() => {
+                const loadAll = async () => {
+                    setIsLoading(true);
+                    let loadedSettings = await dataManager.loadSettings();
+                    if (loadedSettings.theme === 'system') {
+                        const systemTheme = await window.electronAPI.getSystemTheme();
+                        document.body.className = `${systemTheme}-theme`;
+                    } else {
+                        document.body.className = `${loadedSettings.theme}-theme`;
+                    }
+                    const data = await dataManager.loadData() || {};
+                    dispatch({ type: 'REPLACE_SETTINGS', payload: loadedSettings });
+                    dispatch({ type: 'REPLACE_ALL_DATA', payload: data });
+                    if(data.tenants && data.tenants.length > 0) {
+                        window.electronAPI.checkForNotifications({tenants: data.tenants, settings: loadedSettings});
+                    }
+                    setIsLoading(false);
+                };
+                loadAll();
+
+                const handleAppClosing = async () => {
+                    console.log('App is closing, attempting to save data...');
+                    const { view, ...dataToSave } = stateRef.current;
+                    const result = await dataManager.saveData(dataToSave);
+                    if (result.success) { console.log('Auto-save successful.'); } 
+                    else { console.error('Auto-save failed.'); }
+                    window.electronAPI.notifyDataSaved();
+                };
+
+                const cleanupSave = window.electronAPI.onTriggerSave(handleSave);
+                const cleanupBackup = window.electronAPI.onTriggerBackup(() => window.electronAPI.backupData(stateRef.current));
+                const cleanupClosing = window.electronAPI.onAppClosing(handleAppClosing);
+                const cleanupUpdateAvailable = window.electronAPI.onUpdateAvailable(() => addNotification('עדכון חדש זמין!', 'success', 0));
+                const cleanupUpdateDownloaded = window.electronAPI.onUpdateDownloaded(() => addNotification('העדכון מוכן להתקנה.', 'success', -1, [{ label: 'הפעל מחדש', onClick: () => window.electronAPI.restartApp() }]));
+
+                return () => {
+                    cleanupSave();
+                    cleanupBackup();
+                    cleanupClosing();
+                    cleanupUpdateAvailable();
+                    cleanupUpdateDownloaded();
+                };
+            }, []);
+
+            useEffect(() => {
+                document.documentElement.style.setProperty('--accent-color', settings.accentColor);
+                if (settings.theme !== 'system') {
+                    document.body.className = `${settings.theme}-theme`;
+                }
+            }, [settings.accentColor, settings.theme]);
+
+            useEffect(() => { const handleKeyDown = (e) => { if ((e.ctrlKey || e.metaKey) && e.key === 'k') { e.preventDefault(); setCommandPaletteOpen(true); } if (e.key === 'Escape') { setCommandPaletteOpen(false); } }; window.addEventListener('keydown', handleKeyDown); return () => window.removeEventListener('keydown', handleKeyDown); }, []);
+            
+            const handleFabAction = (action) => setQuickActionModal(action);
+            
+            const toggleTheme = async () => {
+                const themes = ['light', 'dark', 'system'];
+                const currentThemeIndex = themes.indexOf(settings.theme);
+                const newTheme = themes[(currentThemeIndex + 1) % themes.length];
+                
+                if (newTheme === 'system') {
+                    const systemTheme = await window.electronAPI.getSystemTheme();
+                    document.body.className = `${systemTheme}-theme`;
+                } else {
+                    document.body.className = `${newTheme}-theme`;
+                }
+
+                const newSettings = { ...settings, theme: newTheme };
+                dispatch({ type: 'REPLACE_SETTINGS', payload: newSettings });
+                dataManager.saveSettings(newSettings);
+            };
+
+            const renderQuickModal = () => {
+                switch(quickActionModal) {
+                    case 'tenant': return <Modal isOpen={true} onClose={() => setQuickActionModal(null)} title="הוספת שוכר חדש"><TenantForm properties={state.properties} onSave={(data) => { dispatch({type: 'ADD_TENANT', payload: data}); addNotification("שוכר חדש נוסף"); setQuickActionModal(null);}} onClose={() => setQuickActionModal(null)}/></Modal>;
+                    case 'property': return <Modal isOpen={true} onClose={() => setQuickActionModal(null)} title="הוספת נכס חדש"><PropertyForm onSave={(data) => { dispatch({type: 'ADD_PROPERTY', payload: data}); addNotification("נכס חדש נוסף"); setQuickActionModal(null);}} onClose={() => setQuickActionModal(null)}/></Modal>;
+                    case 'event': return <Modal isOpen={true} onClose={() => setQuickActionModal(null)} title="הוספת אירוע חדש"><EventForm tenants={state.tenants} onSave={(data) => { dispatch({type: 'ADD_EVENT', payload: data}); addNotification("אירוע חדש נוסף"); setQuickActionModal(null);}} onClose={() => setQuickActionModal(null)}/></Modal>;
+                    case 'payment': return <Modal isOpen={true} onClose={() => setQuickActionModal(null)} title="רישום תשלום חדש"><PaymentForm tenants={state.tenants} onSave={(data) => { dispatch({type: 'ADD_PAYMENT', payload: data}); addNotification("תשלום נרשם"); setQuickActionModal(null);}} onClose={() => setQuickActionModal(null)}/></Modal>;
+                    default: return null;
+                }
+            };
+
+            const renderCurrentView = () => {
+                switch(view.page) {
+                    case 'dashboard': return <Dashboard />;
+                    case 'tenants': return <TenantsTab />;
+                    case 'properties': return <PropertiesTab />;
+                    case 'financials': return <FinancialsTab />;
+                    case 'events': return <EventsTab />;
+                    case 'calendar': return <CalendarTab />;
+                    case 'settings': return <SettingsPage />;
+                    case 'tenantDetail': return <TenantDetailPage tenantId={view.params.id} />;
+                    case 'propertyDetail': return <PropertyDetailPage propertyId={view.params.id} />;
+                    default: return <h2>ברוכים הבאים</h2>;
+                }
+            };
+            
+            const TABS = [ { id: 'dashboard', name: 'סקירה כללית', icon: 'fa-chart-bar' }, { id: 'tenants', name: 'שוכרים', icon: 'fa-users' }, { id: 'properties', name: 'נכסים', icon: 'fa-home' }, { id: 'events', name: 'אירועים', icon: 'fa-calendar-check' }, { id: 'calendar', name: 'לוח שנה', icon: 'fa-calendar-alt' }, { id: 'financials', name: 'פיננסים', icon: 'fa-money-bill-wave' }, { id: 'settings', name: 'הגדרות', icon: 'fa-cog' } ];
+
+            return (
+                <>
+                    <div id="app-container">
+                        <aside className={`sidebar ${sidebarCollapsed ? 'collapsed' : ''}`}>
+                            <div className="sidebar-header"><h1>ניהול שכירות</h1><div className="handwritten-title">By: Dr. Johnny Marshy</div></div>
+                            <ul className="sidebar-nav">
+                                {TABS.map(tab => (<li key={tab.id} className="sidebar-nav-item" data-tooltip={tab.name}><a href="#" className={view.page.startsWith(tab.id) ? 'active' : ''} onClick={(e) => { e.preventDefault(); dispatch({ type: 'CHANGE_VIEW', payload: { page: tab.id } }); }}><i className={`fas ${tab.icon} icon`}></i><span className="sidebar-nav-item-text">{tab.name}</span></a></li>))}
+                            </ul>
+                            <div className="sidebar-footer" style={{ marginTop: 'auto', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                 <button className="primary" onClick={handleSave}><i className="fas fa-save"></i><span className="button-text"> שמור נתונים</span></button>
+                            </div>
+                        </aside>
+                        <main className="main-content">
+                            <header className="main-header">
+                                <div className="header-left">
+                                    <button className="sidebar-toggle" onClick={() => setSidebarCollapsed(!sidebarCollapsed)}><i className="fas fa-bars"></i></button>
+                                    <h2>{TABS.find(t => view.page.startsWith(t.id))?.name || 'פרטים'}</h2>
+                                </div>
+                                <div className="actions">
+                                    <button onClick={toggleTheme}>{settings.theme === 'light' ? <><i className="fas fa-moon"></i> מצב לילה</> : settings.theme === 'dark' ? <><i className="fas fa-desktop"></i> מצב מערכת</> : <><i className="fas fa-sun"></i> מצב יום</>}</button>
+                                    <button onClick={() => setCommandPaletteOpen(true)}><i className="fas fa-search"></i><span style={{marginLeft: '5px'}}>חיפוש (Ctrl+K)</span></button>
+                                </div>
+                            </header>
+                            <div className="page-content-wrapper" key={view.page + (view.params?.id || '')}>
+                                {renderCurrentView()}
+                            </div>
+                        </main>
+                    </div>
+                    <CommandPalette isOpen={isCommandPaletteOpen} onClose={() => setCommandPaletteOpen(false)} />
+                    <FloatingActionButton onAction={handleFabAction} />
+                    {renderQuickModal()}
+                    {isLoading && (<div className="loading-overlay"><i className="fas fa-spinner fa-spin"></i><span>טוען...</span></div>)}
+                </>
+            );
+        };
+        
+        const container = document.getElementById('root');
+        const root = ReactDOM.createRoot(container);
+        root.render(<AppProvider><App /></AppProvider>);
+    </script>
+</body>
+</html>

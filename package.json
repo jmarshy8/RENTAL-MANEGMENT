@@ -1,0 +1,49 @@
+{
+  "name": "rent-manager-desktop",
+  "version": "1.2.0",
+  "description": "A professional desktop application for managing rental properties.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dist": "electron-builder"
+  },
+  "author": "Dr. Johnny Marshy",
+  "license": "ISC",
+  "dependencies": {
+    "electron-log": "^5.1.5",
+    "electron-updater": "^6.2.1",
+    "papaparse": "^5.4.1",
+    "react-grid-layout": "^1.4.4",
+    "uuid": "^11.1.0"
+  },
+  "devDependencies": {
+    "electron": "^29.1.5",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.drjmarshy.rentmanager",
+    "productName": "Rental Management System",
+    "files": [
+      "index.html",
+      "main.js",
+      "preload.js"
+    ],
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "YOUR_GITHUB_USERNAME",
+        "repo": "YOUR_GITHUB_REPO_NAME"
+      }
+    ],
+    "win": {
+      "target": "nsis",
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  }
+}
