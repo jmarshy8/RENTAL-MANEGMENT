@@ -9,6 +9,10 @@
   },
   "author": "Dr. Johnny Marshy",
   "license": "ISC",
+"repository": {
+    "type": "git",
+    "url": "https://github.com/jmarshy8/RENTAL-MANEGMENT.git"
+  },
   "dependencies": {
     "docxtemplater": "^3.47.2",
     "electron-log": "^5.1.5",
