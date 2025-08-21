@@ -7,6 +7,9 @@ const Papa = require('papaparse');
 const { autoUpdater } = require('electron-updater');
 const log = require('electron-log');
 const { v4: uuidv4 } = require('uuid');
+const PizZip = require('pizzip');
+const Docxtemplater = require('docxtemplater');
+const os = require('os');
 
 // --- Auto Updater Configuration ---
 autoUpdater.logger = log;
@@ -174,41 +177,96 @@ ipcMain.handle('load-data', () => {
 ipcMain.handle('save-data', (event, data) => {
     try { fs.writeFileSync(dataFilePath, JSON.stringify(data, null, 2)); return { success: true }; } catch (e) { return { success: false, error: e.message }; }
 });
+
 ipcMain.handle('backup-data', async (event, data) => {
-    const { canceled, filePath } = await dialog.showSaveDialog({ title: 'Save Data Backup', defaultPath: `rent-manager-backup-${new Date().toISOString().split('T')[0]}.json` });
-    if (!canceled && filePath) {
-        try { fs.writeFileSync(filePath, JSON.stringify(data, null, 2)); return { success: true, path: filePath }; } catch (e) { return { success: false, error: e.message }; }
+    const { canceled, filePath } = await dialog.showSaveDialog({
+        title: 'Save Data Backup',
+        defaultPath: `rent-manager-backup-${new Date().toISOString().split('T')[0]}.zip`,
+        filters: [{ name: 'Backup Files', extensions: ['zip'] }]
+    });
+
+    if (canceled || !filePath) {
+        return { success: false, error: 'Backup canceled by user.' };
     }
-    return { success: false, error: 'Backup canceled by user.' };
+
+    try {
+        const zip = new PizZip();
+        zip.file('data.json', JSON.stringify(data, null, 2));
+
+        if (fs.existsSync(documentsPath)) {
+            const docFolder = zip.folder('documents');
+            const files = fs.readdirSync(documentsPath);
+            for (const file of files) {
+                const content = fs.readFileSync(path.join(documentsPath, file));
+                docFolder.file(file, content);
+            }
+        }
+
+        const content = zip.generate({ type: 'nodebuffer', compression: 'DEFLATE' });
+        fs.writeFileSync(filePath, content);
+        return { success: true, path: filePath };
+    } catch (e) {
+        log.error('Backup failed:', e);
+        return { success: false, error: e.message };
+    }
 });
 
 ipcMain.handle('restore-data-from-backup', async () => {
     const { canceled, filePaths } = await dialog.showOpenDialog({
         title: 'Restore from Backup',
-        filters: [{ name: 'JSON Backup', extensions: ['json'] }],
+        filters: [{ name: 'Backup Files', extensions: ['zip'] }],
         properties: ['openFile']
     });
+
     if (canceled || filePaths.length === 0) {
         return { success: false, error: 'Restore canceled by user.' };
     }
+
     try {
-        const fileContent = fs.readFileSync(filePaths[0], 'utf8');
-        const data = JSON.parse(fileContent);
-        if (data.properties && data.tenants) {
-            return { success: true, data };
-        } else {
+        const backupContent = fs.readFileSync(filePaths[0]);
+        const zip = new PizZip(backupContent);
+
+        const dataFile = zip.file('data.json');
+        if (!dataFile) {
+            return { success: false, error: 'Invalid backup file: data.json not found.' };
+        }
+
+        const data = JSON.parse(dataFile.asText());
+        if (!data.properties || !data.tenants) {
             return { success: false, error: 'Invalid backup file format.' };
         }
+
+        // Clear existing documents and restore from backup
+        if (fs.existsSync(documentsPath)) {
+            fs.rmSync(documentsPath, { recursive: true, force: true });
+        }
+        fs.mkdirSync(documentsPath, { recursive: true });
+
+        const docFolder = zip.folder('documents');
+        if (docFolder) {
+            docFolder.forEach((relativePath, file) => {
+                const content = file.asNodeBuffer();
+                fs.writeFileSync(path.join(documentsPath, relativePath), content);
+            });
+        }
+
+        // The renderer will handle saving the restored data to data.json
+        return { success: true, data };
     } catch (e) {
+        log.error('Restore failed:', e);
         return { success: false, error: e.message };
     }
 });
+
 
 ipcMain.on('open-data-folder', () => shell.showItemInFolder(dataFilePath));
 
 // Documents
 ipcMain.handle('upload-file', async () => {
-    const { canceled, filePaths } = await dialog.showOpenDialog({ properties: ['openFile'] });
+    const { canceled, filePaths } = await dialog.showOpenDialog({ 
+        properties: ['openFile'],
+        filters: [{ name: 'Documents', extensions: ['pdf', 'doc', 'docx', 'jpg', 'png'] }]
+     });
     if (canceled || filePaths.length === 0) return { success: false };
     const originalPath = filePaths[0];
     const originalName = path.basename(originalPath);
@@ -263,6 +321,76 @@ ipcMain.on('show-context-menu', (event, menuItems) => {
     const template = menuItems.map(item => ({ label: item.label, click: () => event.sender.send('context-menu-command', item.action) }));
     const menu = Menu.buildFromTemplate(template);
     menu.popup({ window: BrowserWindow.fromWebContents(event.sender) });
+});
+
+// --- Contract Generation ---
+ipcMain.handle('designate-contract-template', (event, { tenantId, fileId }) => {
+    try {
+        const data = JSON.parse(fs.readFileSync(dataFilePath, 'utf8'));
+        const tenantIndex = data.tenants.findIndex(t => t.id === tenantId);
+        if (tenantIndex === -1) return { success: false, error: 'Tenant not found.' };
+        
+        data.tenants[tenantIndex].contract_template_id = fileId;
+        
+        fs.writeFileSync(dataFilePath, JSON.stringify(data, null, 2));
+        return { success: true, updatedTenant: data.tenants[tenantIndex] };
+    } catch (error) {
+        log.error('Failed to designate contract template:', error);
+        return { success: false, error: error.message };
+    }
+});
+
+ipcMain.handle('generate-contract', async (event, tenantId) => {
+    try {
+        const data = JSON.parse(fs.readFileSync(dataFilePath, 'utf8'));
+        const tenant = data.tenants.find(t => t.id === tenantId);
+        if (!tenant) return { success: false, error: 'Tenant not found.' };
+        if (!tenant.contract_template_id) return { success: false, error: 'No contract template designated for this tenant.' };
+
+        const templatePath = path.join(documentsPath, tenant.contract_template_id);
+        if (!fs.existsSync(templatePath)) return { success: false, error: 'Template file not found.' };
+
+        const property = data.properties.find(p => p.id === tenant.property_id) || {};
+
+        const content = fs.readFileSync(templatePath, 'binary');
+        const zip = new PizZip(content);
+        const doc = new Docxtemplater(zip, { paragraphLoop: true, linebreaks: true });
+
+        const templateData = {
+            tenant_name: tenant.name,
+            tenant_id_number: tenant.id_number,
+            tenant_phone: tenant.phone,
+            tenant_address: tenant.address,
+            property_address: property.address,
+            property_type: property.property_type,
+            monthly_rent: tenant.monthly_rent,
+            deposit: tenant.deposit,
+            rent_due_day: tenant.rent_due_day,
+            contract_start_date: formatDate(tenant.contract_start_date),
+            contract_end_date: formatDate(tenant.contract_end_date),
+            current_date: formatDate(new Date())
+        };
+
+        doc.render(templateData);
+
+        const buf = doc.getZip().generate({ type: 'nodebuffer', compression: 'DEFLATE' });
+
+        const { canceled, filePath } = await dialog.showSaveDialog({
+            title: 'Save Generated Contract',
+            defaultPath: `Contract - ${tenant.name} - ${new Date().toISOString().split('T')[0]}.docx`,
+            filters: [{ name: 'Word Document', extensions: ['docx'] }]
+        });
+
+        if (!canceled && filePath) {
+            fs.writeFileSync(filePath, buf);
+            return { success: true, path: filePath };
+        }
+        return { success: false, error: 'Save canceled by user.' };
+
+    } catch (error) {
+        log.error('Failed to generate contract:', error);
+        return { success: false, error: error.message };
+    }
 });
 
 // --- Auto Updater Events ---

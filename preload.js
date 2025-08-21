@@ -66,4 +66,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('app-closing-save-data', handler);
   },
   notifyDataSaved: () => ipcRenderer.send('data-saved-before-quit'),
+
+  // --- Contract Generation ---
+  designateContractTemplate: (tenantId, fileId) => ipcRenderer.invoke('designate-contract-template', { tenantId, fileId }),
+  generateContract: (tenantId) => ipcRenderer.invoke('generate-contract', tenantId),
 });
