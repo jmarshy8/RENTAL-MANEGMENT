@@ -1,6 +1,6 @@
 {
   "name": "rent-manager-desktop",
-  "version": "1.2.0",
+  "version": "1.2.1",
   "description": "A professional desktop application for managing rental properties.",
   "main": "main.js",
   "scripts": {
