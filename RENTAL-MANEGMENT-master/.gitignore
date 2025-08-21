@@ -1,0 +1,8 @@
+# Node dependencies
+/node_modules
+
+# Build output
+/dist
+
+# Electron-Builder cache
+.electron-builder/
