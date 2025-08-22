@@ -1,6 +1,6 @@
 {
   "name": "rent-manager-desktop",
-  "version": "1.2.5",
+  "version": "1.2.8",
   "description": "A professional desktop application for managing rental properties.",
   "main": "main.js",
   "scripts": {
@@ -9,10 +9,16 @@
   },
   "author": "Dr. Johnny Marshy",
   "license": "ISC",
+"repository": {
+    "type": "git",
+    "url": "https://github.com/jmarshy8/RENTAL-MANEGMENT.git"
+  },
   "dependencies": {
+    "docxtemplater": "^3.47.2",
     "electron-log": "^5.1.5",
     "electron-updater": "^6.2.1",
     "papaparse": "^5.4.1",
+    "pizzip": "^3.1.7",
     "react-grid-layout": "^1.4.4",
     "uuid": "^11.1.0"
   },
