@@ -46,6 +46,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return () => ipcRenderer.removeListener('context-menu-command', handler);
   },
 
+  // --- [NEW] Data Path Management ---
+  getDataPath: () => ipcRenderer.invoke('get-data-path'),
+  changeDataPath: () => ipcRenderer.invoke('change-data-path'),
+
   // --- Auto Updater ---
   onUpdateAvailable: (callback) => {
     const handler = (event, ...args) => callback(...args);

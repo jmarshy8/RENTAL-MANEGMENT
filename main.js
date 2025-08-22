@@ -16,8 +16,31 @@ autoUpdater.logger = log;
 autoUpdater.logger.transports.file.level = 'info';
 log.info('App starting...');
 
-// --- Paths Configuration ---
-const userDataPath = app.getPath('userData');
+// --- [NEW] Dynamic Path Configuration ---
+const defaultConfigPath = app.getPath('userData');
+const appConfigFile = path.join(defaultConfigPath, 'config.json');
+
+function getDataPath() {
+    if (fs.existsSync(appConfigFile)) {
+        try {
+            const config = JSON.parse(fs.readFileSync(appConfigFile, 'utf-8'));
+            // Ensure the configured directory exists before using it
+            if (config.dataDirectory && fs.existsSync(config.dataDirectory)) {
+                return config.dataDirectory;
+            }
+        } catch (e) {
+            log.error('Could not read or parse app config file, falling back to default.', e);
+        }
+    }
+    return defaultConfigPath; // Default path if no valid custom path is set
+}
+
+// This is now dynamic and will be either the default path or the user's chosen cloud folder.
+const userDataPath = getDataPath(); 
+// --- End of New Section ---
+
+
+// --- Paths Configuration (Now uses the dynamic userDataPath) ---
 const dataFilePath = path.join(userDataPath, 'data.json');
 const settingsFilePath = path.join(userDataPath, 'settings.json');
 const documentsPath = path.join(userDataPath, 'documents');
@@ -133,6 +156,66 @@ app.whenReady().then(() => {
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
 
 // --- IPC Handlers ---
+
+// --- [NEW] IPC Handlers for Data Path Management ---
+ipcMain.handle('get-data-path', () => {
+    return userDataPath; // Return the currently used path
+});
+
+ipcMain.handle('change-data-path', async () => {
+    const { canceled, filePaths } = await dialog.showOpenDialog(mainWindow, {
+        title: 'Select a New Data Folder',
+        properties: ['openDirectory']
+    });
+
+    if (canceled || filePaths.length === 0) {
+        return { success: false, error: 'User canceled selection.' };
+    }
+
+    const newPath = filePaths[0];
+    const oldPath = getDataPath();
+
+    if (newPath === oldPath) {
+        return { success: true, message: 'The new path is the same as the current one. No changes made.' };
+    }
+
+    try {
+        // 1. Copy all essential files and folders to the new location
+        if (fs.existsSync(path.join(oldPath, 'data.json'))) {
+            fs.copyFileSync(path.join(oldPath, 'data.json'), path.join(newPath, 'data.json'));
+        }
+        if (fs.existsSync(path.join(oldPath, 'settings.json'))) {
+            fs.copyFileSync(path.join(oldPath, 'settings.json'), path.join(newPath, 'settings.json'));
+        }
+        // Use fs.cpSync for modern, recursive directory copying
+        if (fs.existsSync(path.join(oldPath, 'documents'))) {
+            fs.cpSync(path.join(oldPath, 'documents'), path.join(newPath, 'documents'), { recursive: true });
+        }
+         if (fs.existsSync(path.join(oldPath, 'backups'))) {
+            fs.cpSync(path.join(oldPath, 'backups'), path.join(newPath, 'backups'), { recursive: true });
+        }
+
+        // 2. Update the app config file (in the default location) to point to the new directory
+        fs.writeFileSync(appConfigFile, JSON.stringify({ dataDirectory: newPath }, null, 2));
+
+        // 3. Inform the user and restart
+        dialog.showMessageBox(mainWindow, {
+            type: 'info',
+            title: 'Path Changed Successfully',
+            message: 'The data path has been updated. The application will now restart to apply the changes.'
+        }).then(() => {
+            app.relaunch();
+            app.exit();
+        });
+
+        return { success: true };
+
+    } catch (e) {
+        log.error('Failed to change data path:', e);
+        return { success: false, error: e.message };
+    }
+});
+// --- End of New Section ---
 
 ipcMain.handle('get-system-theme', () => {
     return nativeTheme.shouldUseDarkColors ? 'dark' : 'light';
